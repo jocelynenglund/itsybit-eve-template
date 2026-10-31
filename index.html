@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>itsybit EVE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: a drafting sheet. Steps run across the top, one working column below; sticky-note colours (event, command, view) carry meaning. */
+  --paper:#eef1ee; --surface:#ffffff; --ink:#1b2220; --muted:#5a6662; --line:#d3dad6; --accent:#1d6a63;
+  --event:#e48a33; --command:#3f76db; --view:#37965f; --warn:#b0501a;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#101513; --surface:#19201d; --ink:#e4ebe7; --muted:#99a6a0; --line:#2b3531; --accent:#5fc2b4;
+    --event:#f0a356; --command:#7fa4f2; --view:#5fc08a; --warn:#f08a50; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#101513; --surface:#19201d; --ink:#e4ebe7; --muted:#99a6a0; --line:#2b3531; --accent:#5fc2b4;
+  --event:#f0a356; --command:#7fa4f2; --view:#5fc08a; --warn:#f08a50; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--body);}
+h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:22px} h2{font-size:20px} h3{font-size:16px}
+p{margin:0}
+code,pre,.mono{font-family:var(--mono)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.wrap{max-width:980px;margin:0 auto;padding:0 18px}
+header.top{border-bottom:1px solid var(--line);background:var(--surface)}
+.top .wrap{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;padding-top:14px;padding-bottom:14px}
+.brand{display:flex;gap:10px;align-items:center}
+.mark{width:26px;height:26px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px}
+.mark i{border-radius:3px}
+.mark i:nth-child(1){background:var(--command)} .mark i:nth-child(2){background:var(--event)} .mark i:nth-child(3){background:var(--view)}
+.brand small{display:block;color:var(--muted);font-size:13px}
+.status{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--surface);white-space:nowrap}
+.pill.ok{border-color:color-mix(in srgb,var(--view) 50%,var(--line));color:var(--view)}
+.pill.bad{border-color:color-mix(in srgb,var(--warn) 55%,var(--line));color:var(--warn);cursor:pointer}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+nav.steps{border-bottom:1px solid var(--line);background:var(--surface)}
+nav.steps .wrap{display:flex;gap:4px;overflow-x:auto}
+nav.steps a{display:flex;gap:8px;align-items:center;padding:10px 12px;color:var(--muted);text-decoration:none;border-bottom:3px solid transparent;white-space:nowrap;font-weight:500}
+nav.steps a b{font-family:var(--mono);font-weight:500;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:0 6px}
+nav.steps a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.steps a[aria-current="page"] b{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+
+main{padding:22px 0 90px}
+.lede{display:grid;gap:6px;margin-bottom:18px;max-width:65ch}
+.lede p{color:var(--muted)}
+.stack{display:grid;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:10px}
+.card.kind-event{border-left:5px solid var(--event)}
+.card.kind-command{border-left:5px solid var(--command)}
+.card.kind-view{border-left:5px solid var(--view)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grow{flex:1 1 220px;min-width:0}
+label.f{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
+input[type=text],textarea,select{background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:7px 10px;width:100%}
+textarea{min-height:96px;resize:vertical;line-height:1.5}
+input.name{font-family:var(--mono);font-weight:500}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:6px 12px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.btn.quiet{border-color:transparent;background:transparent;color:var(--muted);padding:4px 8px}
+.btn.quiet:hover{color:var(--ink);border-color:var(--line)}
+.btn.danger{color:var(--warn)}
+.tag{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:4px 7px;border-radius:5px;white-space:nowrap}
+.tag.event{background:color-mix(in srgb,var(--event) 22%,transparent);color:color-mix(in srgb,var(--event) 75%,var(--ink))}
+.tag.command{background:color-mix(in srgb,var(--command) 20%,transparent);color:color-mix(in srgb,var(--command) 75%,var(--ink))}
+.tag.view{background:color-mix(in srgb,var(--view) 20%,transparent);color:color-mix(in srgb,var(--view) 75%,var(--ink))}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 13px/1.2 var(--mono);border:1px dashed var(--line);background:transparent;border-radius:6px;padding:5px 8px;cursor:pointer;color:var(--muted)}
+.chip[aria-pressed="true"]{border-style:solid;border-color:color-mix(in srgb,var(--event) 60%,var(--line));background:color-mix(in srgb,var(--event) 18%,var(--surface));color:var(--ink)}
+.hint{font-size:13px;color:var(--muted)}
+.hint.warn{color:var(--warn)}
+.num{font:500 12px/1 var(--mono);color:var(--muted);width:22px;text-align:right;font-variant-numeric:tabular-nums}
+.section-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:18px 0 8px}
+.section-h:first-child{margin-top:0}
+.addbar{display:flex;flex-wrap:wrap;gap:8px;align-items:end;background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:12px 14px}
+
+.gwt{display:grid;grid-template-columns:72px 1fr;gap:6px 10px;align-items:start;border-top:1px solid var(--line);padding-top:10px}
+.gwt:first-of-type{border-top:0;padding-top:0}
+.gwt .k{font:600 12px/30px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.gwt .v{min-height:30px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.gwt .title{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.gwt .title strong{font-size:14px}
+.nothing{font:500 13px var(--mono);color:var(--muted);font-style:italic}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}}
+.method{display:grid;gap:10px;counter-reset:m}
+.method li{list-style:none;display:grid;grid-template-columns:26px 1fr;gap:8px}
+.method li::before{counter-increment:m;content:counter(m);font:600 12px/22px var(--mono);text-align:center;border-radius:6px;background:var(--paper);border:1px solid var(--line)}
+.method{padding:0;margin:0}
+
+.files{display:grid;grid-template-columns:230px minmax(0,1fr);gap:12px;align-items:start}
+@media (max-width:760px){.files{grid-template-columns:1fr}}
+.filelist{display:grid;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px}
+.filelist button{text-align:left;border:0;background:transparent;border-radius:6px;padding:6px 8px;font:13px var(--mono);cursor:pointer;color:var(--muted);overflow-wrap:anywhere}
+.filelist button[aria-current="true"]{background:var(--paper);color:var(--ink);font-weight:500}
+.preview{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.preview .bar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);font:13px var(--mono)}
+.preview pre{margin:0;padding:14px;overflow:auto;max-height:560px;font-size:13px;line-height:1.55;white-space:pre}
+.gaps{display:grid;gap:6px}
+.gap{display:flex;gap:8px;align-items:center;font-size:14px}
+.gap a{color:inherit}
+.order{margin:0;padding-left:22px;display:grid;gap:3px;font-family:var(--mono);font-size:13px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:8px;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
+
+.logpill{position:fixed;left:12px;bottom:12px;z-index:10;display:flex;gap:8px;align-items:center;background:#16181a;color:#f1efe8;border:0;border-radius:999px;padding:6px 12px;font:500 12px var(--mono);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.logpill .dot{background:#f0a356;animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.logpill .dot{animation:none}}
+.logpanel{position:fixed;left:12px;bottom:52px;z-index:10;width:min(420px,calc(100% - 24px));max-height:60vh;display:flex;flex-direction:column;background:#16181a;color:#f1efe8;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.35);font:12px/1.45 var(--mono)}
+.logpanel header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #2c3033}
+.logpanel header button{background:transparent;color:#f1efe8;border:1px solid #3a3f43;border-radius:6px;padding:3px 8px;cursor:pointer;font:inherit}
+.logpanel ol{list-style:none;margin:0;padding:6px 0;overflow:auto}
+.logpanel li{display:grid;grid-template-columns:34px 1fr;gap:8px;padding:3px 12px}
+.logpanel li span{color:#8d9396;text-align:right;font-variant-numeric:tabular-nums}
+.logpanel li em{font-style:normal;color:#f0a356}
+.confirm{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+const KEY = "itsybit-eve.log.v1";
+const F = "```";
+const TABS = [
+  ["idea", "Idea"], ["events", "Events"], ["slices", "Slices"], ["scenarios", "Scenarios"], ["pack", "Starter pack"]
+];
+const STACKS = {
+  ts: { label: "TypeScript + Node (Vitest)", dir: n => "src/slices/" + kebab(n) + "/" },
+  cs: { label: "C# + .NET (xUnit)", dir: n => "src/Slices/" + n + "/" },
+  py: { label: "Python (pytest)", dir: n => "app/slices/" + snake(n) + "/" }
+};
+const STORES = {
+  jsonl: "an append-only file, data/events.jsonl (one JSON event per line)",
+  sqlite: "one SQLite table, events(position, stream, type, data, recorded_at), insert-only"
+};
+
+/* ---------- the app's own event log ---------- */
+let log = [];
+let ui = { logOpen: false, file: "CLAUDE.md", confirmReset: false, toast: "" };
+
+function uid() { return Math.random().toString(36).slice(2, 9); }
+function now() { return new Date().toISOString(); }
+
+function exampleLog() {
+  const e = (type, data) => ({ type, data, at: "2026-10-31T09:00:00.000Z" });
+  return [
+    e("ModelStarted", { example: true, name: "Plant Swap", stack: "ts", store: "jsonl",
+      idea: "Neighbours list houseplant cuttings they can spare and swap them with each other. Someone offers one of their own plants for a cutting they like; the owner accepts or declines, and they mark the swap done once the plants have changed hands." }),
+    e("EventAdded", { id: "e1", name: "PlantListed", fields: "plantId, ownerId, species, note" }),
+    e("EventAdded", { id: "e2", name: "SwapRequested", fields: "swapId, plantId, requesterId, offeredPlantId" }),
+    e("EventAdded", { id: "e3", name: "SwapAccepted", fields: "swapId, acceptedAt" }),
+    e("EventAdded", { id: "e4", name: "SwapDeclined", fields: "swapId, reason" }),
+    e("EventAdded", { id: "e5", name: "PlantsHandedOver", fields: "swapId, handedOverAt" }),
+    e("SliceAdded", { id: "s1", kind: "command", name: "ListPlant", fields: "ownerId, species, note", emits: ["e1"] }),
+    e("ScenarioAdded", { id: "c1", sliceId: "s1", outcome: "event", given: [], then: "e1" }),
+    e("ScenarioAdded", { id: "c2", sliceId: "s1", outcome: "refused", given: [], reason: "Species is required" }),
+    e("SliceAdded", { id: "s2", kind: "command", name: "RequestSwap", fields: "plantId, requesterId, offeredPlantId", emits: ["e2"] }),
+    e("ScenarioAdded", { id: "c3", sliceId: "s2", outcome: "event", given: ["e1"], then: "e2" }),
+    e("ScenarioAdded", { id: "c4", sliceId: "s2", outcome: "refused", given: [], reason: "That plant isn't listed" }),
+    e("ScenarioAdded", { id: "c5", sliceId: "s2", outcome: "refused", given: ["e1", "e2", "e3", "e5"], reason: "That plant has already been swapped" }),
+    e("SliceAdded", { id: "s3", kind: "command", name: "AcceptSwap", fields: "swapId, ownerId", emits: ["e3"] }),
+    e("ScenarioAdded", { id: "c6", sliceId: "s3", outcome: "event", given: ["e1", "e2"], then: "e3" }),
+    e("ScenarioAdded", { id: "c7", sliceId: "s3", outcome: "refused", given: ["e1", "e2", "e4"], reason: "That swap was already declined" }),
+    e("SliceAdded", { id: "s4", kind: "command", name: "DeclineSwap", fields: "swapId, ownerId, reason", emits: ["e4"] }),
+    e("ScenarioAdded", { id: "c8", sliceId: "s4", outcome: "event", given: ["e1", "e2"], then: "e4" }),
+    e("SliceAdded", { id: "s5", kind: "command", name: "ConfirmHandover", fields: "swapId", emits: ["e5"] }),
+    e("ScenarioAdded", { id: "c9", sliceId: "s5", outcome: "event", given: ["e1", "e2", "e3"], then: "e5" }),
+    e("ScenarioAdded", { id: "c10", sliceId: "s5", outcome: "refused", given: ["e1", "e2"], reason: "The swap hasn't been accepted yet" }),
+    e("SliceAdded", { id: "s6", kind: "view", name: "AvailablePlants", fields: "plantId, species, ownerId", reads: ["e1", "e5"] }),
+    e("ScenarioAdded", { id: "c11", sliceId: "s6", outcome: "shows", given: ["e1"], shows: "the plant, with its species" }),
+    e("ScenarioAdded", { id: "c12", sliceId: "s6", outcome: "shows", given: ["e1", "e2", "e3", "e5"], shows: "nothing: the plant has been swapped" }),
+    e("SliceAdded", { id: "s7", kind: "view", name: "MySwapRequests", fields: "swapId, species, status", reads: ["e2", "e3", "e4"] }),
+    e("ScenarioAdded", { id: "c13", sliceId: "s7", outcome: "shows", given: ["e1", "e2", "e3"], shows: "the swap, status Accepted" })
+  ];
+}
+
+function blankLog() {
+  return [{ type: "ModelStarted", data: { name: "My app", idea: "", stack: "ts", store: "jsonl" }, at: now() }];
+}
+
+function fold(entries) {
+  const s = { name: "", idea: "", stack: "ts", store: "jsonl", example: false, events: [], slices: [], scenarios: [] };
+  const byId = (list, id) => list.find(x => x.id === id);
+  for (const { type, data: d } of entries) {
+    switch (type) {
+      case "ModelStarted":
+        Object.assign(s, { name: d.name || "", idea: d.idea || "", stack: d.stack || "ts", store: d.store || "jsonl",
+          example: !!d.example, events: [], slices: [], scenarios: [] });
+        break;
+      case "IdeaEdited":
+        for (const k of ["name", "idea", "stack", "store"]) if (k in d) s[k] = d[k];
+        s.example = false;
+        break;
+      case "EventAdded":
+        s.events.push({ id: d.id, name: d.name, fields: d.fields || "" }); break;
+      case "EventEdited": { const x = byId(s.events, d.id); if (x) Object.assign(x, d); break; }
+      case "EventMoved": {
+        const i = s.events.findIndex(x => x.id === d.id), j = i + d.by;
+        if (i >= 0 && j >= 0 && j < s.events.length) { const [x] = s.events.splice(i, 1); s.events.splice(j, 0, x); }
+        break;
+      }
+      case "EventRemoved":
+        s.events = s.events.filter(x => x.id !== d.id);
+        s.slices.forEach(sl => { sl.emits = sl.emits.filter(i => i !== d.id); sl.reads = sl.reads.filter(i => i !== d.id); });
+        s.scenarios.forEach(sc => { sc.given = sc.given.filter(i => i !== d.id); if (sc.then === d.id) sc.then = ""; });
+        break;
+      case "SliceAdded":
+        s.slices.push({ id: d.id, kind: d.kind, name: d.name, fields: d.fields || "", emits: d.emits || [], reads: d.reads || [] }); break;
+      case "SliceEdited": { const x = byId(s.slices, d.id); if (x) Object.assign(x, d); break; }
+      case "SliceRemoved":
+        s.slices = s.slices.filter(x => x.id !== d.id);
+        s.scenarios = s.scenarios.filter(x => x.sliceId !== d.id);
+        break;
+      case "ScenarioAdded":
+        s.scenarios.push({ id: d.id, sliceId: d.sliceId, outcome: d.outcome, given: d.given || [], then: d.then || "",
+          reason: d.reason || "", shows: d.shows || "" });
+        break;
+      case "ScenarioEdited": { const x = byId(s.scenarios, d.id); if (x) Object.assign(x, d); break; }
+      case "ScenarioRemoved":
+        s.scenarios = s.scenarios.filter(x => x.id !== d.id); break;
+    }
+  }
+  return s;
+}
+
+/* ---------- derived ---------- */
+function kebab(n) { return n.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/[\s_]+/g, "-").toLowerCase(); }
+function snake(n) { return kebab(n).replace(/-/g, "_"); }
+function evName(S, id) { const e = S.events.find(x => x.id === id); return e ? e.name : "?"; }
+function fieldsOf(str) { return String(str || "").split(",").map(x => x.trim()).filter(Boolean); }
+function orderedGiven(S, given) { return S.events.filter(e => given.includes(e.id)).map(e => e.id); }
+function scenariosFor(S, sl) {
+  const list = S.scenarios.filter(x => x.sliceId === sl.id);
+  return list.filter(x => x.outcome === "event").concat(list.filter(x => x.outcome !== "event"));
+}
+function thenEvent(sl, sc) { return sc.then && sl.emits.includes(sc.then) ? sc.then : sl.emits[0] || ""; }
+function looksLikeFact(name) {
+  const last = (name.match(/[A-Z][a-z0-9]*$/) || [name])[0].toLowerCase();
+  return /(ed|en|wn|nt|ld|id|ne|ht|uck|ung|ost|ade|ame|ove|ook|ew)$/.test(last);
+}
+
+function gaps(S) {
+  const g = [];
+  for (const sl of S.slices) {
+    const sc = S.scenarios.filter(x => x.sliceId === sl.id);
+    if (sl.kind === "command") {
+      if (!sl.emits.length) g.push({ sev: "gap", tab: "slices", text: sl.name + " doesn't produce an event yet" });
+      if (!sc.some(x => x.outcome === "event")) g.push({ sev: "gap", tab: "scenarios", text: sl.name + " has no happy case" });
+      if (sc.some(x => x.outcome === "refused" && !x.reason.trim())) g.push({ sev: "gap", tab: "scenarios", text: "A refusal on " + sl.name + " has no reason" });
+    } else {
+      if (!sl.reads.length) g.push({ sev: "gap", tab: "slices", text: sl.name + " doesn't read any events" });
+      if (!sc.length) g.push({ sev: "gap", tab: "scenarios", text: sl.name + " has no scenario" });
+    }
+  }
+  for (const ev of S.events) {
+    if (!S.slices.some(s => s.kind === "command" && s.emits.includes(ev.id))) g.push({ sev: "gap", tab: "slices", text: "No command produces " + ev.name });
+    if (!S.slices.some(s => s.kind === "view" && s.reads.includes(ev.id))) g.push({ sev: "note", tab: "slices", text: "No view shows " + ev.name + " yet" });
+  }
+  if (!S.events.length) g.push({ sev: "gap", tab: "events", text: "Add the events first" });
+  return g;
+}
+
+function buildOrder(S) {
+  const pos = id => { const i = S.events.findIndex(e => e.id === id); return i < 0 ? 999 : i; };
+  const cmds = S.slices.filter(s => s.kind === "command").slice()
+    .sort((a, b) => Math.min(999, ...a.emits.map(pos)) - Math.min(999, ...b.emits.map(pos)));
+  const views = S.slices.filter(s => s.kind === "view");
+  return cmds.concat(views);
+}
+
+/* ---------- the starter pack ---------- */
+function scenarioLines(S, sl, sc, n, label) {
+  const given = orderedGiven(S, sc.given).map(id => evName(S, id));
+  const out = ["### " + n + ". " + label, "- Given: " + (given.length ? given.join(", ") : "nothing")];
+  if (sl.kind === "command") {
+    out.push("- When: " + sl.name);
+    out.push(sc.outcome === "event" ? "- Then: " + (evName(S, thenEvent(sl, sc)) || "?")
+      : "- Then: refused, \"" + (sc.reason || "?") + "\"");
+  } else {
+    out.push("- When: someone opens " + sl.name);
+    out.push("- Then: it shows " + (sc.shows || "?"));
+  }
+  return out.join("\n");
+}
+
+function scenarioLabel(sl, sc, i) {
+  if (sl.kind === "view") return "Shows " + (sc.shows || "…");
+  if (sc.outcome === "event") return i === 0 ? "Happy case" : "Also succeeds";
+  return "Refused: " + (sc.reason || "…");
+}
+
+function sliceSpec(S, sl) {
+  const st = STACKS[S.stack];
+  const list = scenariosFor(S, sl);
+  const head = [
+    "# " + sl.name + " (" + sl.kind + ")",
+    "",
+    "Folder: `" + st.dir(sl.name) + "`",
+    sl.fields.trim() ? (sl.kind === "command" ? "Command fields: " : "Shows fields: ") + fieldsOf(sl.fields).join(", ") : "",
+    sl.kind === "command"
+      ? "Produces: " + (sl.emits.map(id => evName(S, id)).join(", ") || "(none yet)")
+      : "Built from: " + (sl.reads.map(id => evName(S, id)).join(", ") || "(none yet)"),
+    "",
+    "## Scenarios",
+    sl.kind === "command"
+      ? "Turn each one into a test of `decide` before writing it. Happy case first."
+      : "Turn each one into a test of `project` before writing it.",
+    ""
+  ].filter((l, i, a) => l !== "" || a[i - 1] !== "");
+  const body = list.map((sc, i) => scenarioLines(S, sl, sc, i + 1, scenarioLabel(sl, sc, i)));
+  return head.join("\n") + "\n" + (body.join("\n\n") || "_No scenarios yet._") + "\n";
+}
+
+function signature(S, sl) {
+  const n = sl.name;
+  if (S.stack === "cs") return sl.kind === "command"
+    ? "public static Decision Decide(IReadOnlyList<object> history, " + n + " command)"
+    : "public static " + n + "View Project(IReadOnlyList<object> history)";
+  if (S.stack === "py") return sl.kind === "command"
+    ? "def decide(history: list[Event], command: " + n + ") -> Decision:"
+    : "def project(history: list[Event]) -> " + n + "View:";
+  return sl.kind === "command"
+    ? "export function decide(history: DomainEvent[], command: " + n + "): Decision"
+    : "export function project(history: DomainEvent[]): " + n + "View";
+}
+
+function testShape(S, sl, sc) {
+  const given = orderedGiven(S, sc.given).map(id => evName(S, id));
+  const ev = evName(S, thenEvent(sl, sc));
+  const n = sl.name;
+  if (S.stack === "cs") return [
+    "[Fact]",
+    "public void " + n + "_happy_case()",
+    "{",
+    "    var history = new List<object> { " + given.map(g => "A." + g + "()").join(", ") + " };",
+    "    var decision = " + n + "Slice.Decide(history, A." + n + "());",
+    "    Assert.IsType<" + ev + ">(Assert.Single(decision.Events));",
+    "}"
+  ].join("\n");
+  if (S.stack === "py") return [
+    "def test_" + snake(n) + "_happy_case():",
+    "    history = [" + given.map(g => "a." + snake(g) + "()").join(", ") + "]",
+    "    decision = decide(history, a." + snake(n) + "())",
+    "    assert [type(e).__name__ for e in decision.events] == [\"" + ev + "\"]"
+  ].join("\n");
+  return [
+    "test(\"" + n + ": happy case\", () => {",
+    "  const history = [" + given.map(g => "a." + g[0].toLowerCase() + g.slice(1) + "()").join(", ") + "];",
+    "  const decision = decide(history, a." + n[0].toLowerCase() + n.slice(1) + "());",
+    "  expect(decision).toMatchObject({ events: [{ type: \"" + ev + "\" }] });",
+    "});"
+  ].join("\n");
+}
+
+function claudeMd(S) {
+  const st = STACKS[S.stack];
+  const first = buildOrder(S).find(s => s.kind === "command");
+  const firstView = S.slices.find(s => s.kind === "view");
+  const lang = S.stack === "cs" ? "csharp" : S.stack === "py" ? "python" : "ts";
+  const happy = first && scenariosFor(S, first).find(x => x.outcome === "event");
+  const out = [
+    "# " + (S.name || "This app") + ": how to build it",
+    "",
+    S.idea.trim() || "_Describe the app here._",
+    "",
+    "Stack: " + st.label + ". Events are stored in " + STORES[S.store] + ".",
+    "",
+    "## The shape of the code",
+    "",
+    "- **Event-sourced.** The only state stored is an append-only list of events. Everything else is worked out from it. Never update or delete an event: a correction is a new event.",
+    "- **Vertical slices.** One folder per slice. A slice owns its command or view, its rules, its tests and its endpoint. No shared service or repository layer; shared code is limited to the event types and the event store adapter.",
+    "- **Plain data.** Events, commands and views are plain types. Events are facts in the past tense (" + (S.events[0] ? S.events[0].name : "OrderPlaced") + "); commands are requests (" + (first ? first.name : "PlaceOrder") + ").",
+    "- **Pure rules.** Each command slice has one pure function that reads the history and either returns new events or refuses with a reason. No database, network or clock inside it: pass `now` in as an argument when a rule needs the time.",
+    "- **Pure views.** Each view slice has one pure function that folds the history into what the screen shows.",
+    "- **Thin endpoints.** The endpoint is the only place with I/O: load the events, call the function, append what it returns (or send back the refusal).",
+    ""
+  ];
+  if (first) out.push(
+    "For example, `" + st.dir(first.name) + "`:",
+    "",
+    F + lang,
+    signature(S, first),
+    F,
+    "");
+  if (firstView) out.push(F + lang, signature(S, firstView), F, "");
+  out.push(
+    "## How to work",
+    "",
+    "1. The model comes first. `docs/model.json` lists every event, command and view; `docs/slices/` has one spec per slice. If a slice needs an event that isn't in the model, stop and ask before adding it.",
+    "2. One slice at a time, in the order in `KICKOFF.md`.",
+    "3. Test first. Turn each Given/When/Then in the slice's spec into a test, run it and see it fail for the right reason, then write the code. Happy case first, then each refusal.",
+    "4. A slice is done when all its scenarios pass and the endpoint works. Never change a scenario to make a test pass; ask instead.",
+    "5. Tests of `decide` and `project` need no database, server or mocks: given a list of events, check the result.",
+    "");
+  if (first && happy) out.push(
+    "A test has this shape (`a` builds example events and commands):",
+    "",
+    F + lang,
+    testShape(S, first, happy),
+    F,
+    "");
+  out.push(    "## Reporting back: the Event Book",
+    "",
+    "`docs/event-book.html` is the plan, frozen. The person opens it in a browser to see how the build is going. Never edit it, and don't edit `docs/model.json` without asking.",
+    "",
+    "You report by editing **`docs/progress.js`**, and only that file:",
+    "",
+    "- When you start a slice, set its `status` to `building`. When all its scenarios pass, set it to `done`.",
+    "- After every test run, set `scenarios` to `pass` / `fail` / `todo`, one per scenario, in the order of the slice's spec.",
+    "- Give each slice a one-line `note` in plain words: what works now, or what's in the way.",
+    "- Add a message to `messages` (`{ \"at\": \"YYYY-MM-DD HH:MM\", \"slice\": \"…\", \"text\": \"…\", \"needs\": false }`) after each slice. When you need a decision, an answer or an action from the person, set `needs: true`, set the slice to `blocked`, and say exactly what you need.",
+    "- Update `updatedAt` every time, and keep the file valid JavaScript.",
+    "");
+  return out.join("\n");
+}
+
+function kickoffMd(S) {
+  const st = STACKS[S.stack];
+  const order = buildOrder(S);
+  return [
+    "# Kickoff",
+    "",
+    "Paste this to your AI coding assistant in the project folder.",
+    "",
+    "---",
+    "",
+    "You're building **" + (S.name || "this app") + "**, an event-sourced app made of vertical slices. Read `CLAUDE.md` first and follow it.",
+    "",
+    "1. Set up an empty " + st.label + " project with a test runner, the event types from `docs/model.json`, and an event store that is " + STORES[S.store] + ". Show me one passing test, then commit.",
+    "2. Build these slices one at a time, in this order:",
+    order.map((s, i) => "   " + (i + 1) + ". " + s.name + " (" + s.kind + "), spec in `docs/slices/" + s.name + ".md`").join("\n"),
+    "3. For each slice: write its scenarios as tests, run them and show me they fail, write the code until they pass, wire up its endpoint, run every test, commit.",
+    "4. After each slice, update `docs/progress.js` as `CLAUDE.md` describes, and tell me in one line what someone can now do in the app. I follow along in `docs/event-book.html`.",
+    "",
+    "When a scenario looks wrong, or a slice seems to need an event, field or rule that isn't in the model, stop: post it in `docs/progress.js` with `needs: true` and ask me here too.",
+    ""
+  ].join("\n");
+}
+
+function modelJson(S) { return JSON.stringify(modelObj(S), null, 2) + "\n"; }
+
+function progressJs(S) {
+  const slices = {};
+  for (const sl of buildOrder(S)) slices[sl.name] = { status: "todo", scenarios: scenariosFor(S, sl).map(() => "todo"), note: "" };
+  const p = {
+    updatedAt: now().slice(0, 16).replace("T", " "),
+    slices,
+    messages: [{ at: now().slice(0, 16).replace("T", " "), text: "Plan frozen. Nothing built yet.", needs: false }]
+  };
+  return [
+    "// Written by the AI assistant to report progress. Open event-book.html to read it.",
+    "// status: todo | building | done | blocked.  scenarios: one of todo | pass | fail per scenario, in spec order.",
+    "// messages: newest last. needs: true when the person has to answer or do something.",
+    "window.BUILD_PROGRESS = " + JSON.stringify(p, null, 2) + ";",
+    ""
+  ].join("\n");
+}
+
+function eventBookHtml(S) {
+  const model = JSON.stringify(modelObj(S)).replace(/</g, "\\u003c");
+  const frozen = now().slice(0, 10);
+  const SC = "<" + "/script>";
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(S.name || "App")} · Event Book</title>
+<style>
+:root{--paper:#eef1ee;--surface:#fff;--ink:#1b2220;--muted:#5a6662;--line:#d3dad6;--event:#e48a33;--command:#3f76db;--view:#37965f;--pass:#2f8f57;--fail:#c2410c;--ask:#b45309;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--paper:#101513;--surface:#19201d;--ink:#e4ebe7;--muted:#99a6a0;--line:#2b3531;--event:#f0a356;--command:#7fa4f2;--view:#5fc08a;--pass:#5fc08a;--fail:#f08a50;--ask:#f0b356;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,"Segoe UI",sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:20px 16px 60px;display:grid;gap:14px}
+h1,h2{margin:0;text-wrap:balance}h1{font-size:22px}h2{font-size:16px}
+.muted{color:var(--muted);font-size:13px}code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:8px}
+.command{border-left:5px solid var(--command)}.view{border-left:5px solid var(--view)}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--pass)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.st{font:600 11px/1 ui-monospace,monospace;text-transform:uppercase;letter-spacing:.06em;padding:4px 7px;border-radius:5px;border:1px solid var(--line)}
+.st.done{color:var(--pass);border-color:var(--pass)}.st.building{color:var(--command);border-color:var(--command)}.st.blocked{color:var(--fail);border-color:var(--fail)}
+.sc{display:grid;grid-template-columns:14px 1fr;gap:8px;font-size:14px}.d{width:10px;height:10px;border-radius:50%;margin-top:6px;border:2px solid var(--line)}
+.d.pass{background:var(--pass);border-color:var(--pass)}.d.fail{background:var(--fail);border-color:var(--fail)}
+.ev{color:var(--event);font-weight:600}.msg{display:grid;gap:2px;border-top:1px solid var(--line);padding-top:8px}.msg:first-of-type{border-top:0;padding-top:0}
+.msg.needs{border-left:4px solid var(--ask);padding-left:10px}.needs b{color:var(--ask)}
+</style></head><body><div class="wrap" id="book"></div>
+<script>window.BUILD_PROGRESS = null;${SC}
+<script src="progress.js">${SC}
+<script>
+const MODEL = ${model};
+const FROZEN = "${frozen}";
+const P = window.BUILD_PROGRESS || { slices: {}, messages: [] };
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const done = MODEL.slices.filter(s => (P.slices[s.name] || {}).status === "done").length;
+const msgs = (P.messages || []).slice().reverse();
+const asks = msgs.filter(m => m.needs).length;
+let h = '<div><h1>' + esc(MODEL.app) + ' · Event Book</h1><p class="muted">Plan frozen ' + FROZEN + (P.updatedAt ? ' · last report ' + esc(P.updatedAt) : ' · no report yet (progress.js missing)') + '</p></div>';
+h += '<div class="card"><div class="row"><h2>' + done + ' of ' + MODEL.slices.length + ' slices built</h2>' + (asks ? '<span class="st blocked">' + asks + ' need' + (asks > 1 ? '' : 's') + ' you</span>' : '') + '</div><div class="bar"><i style="width:' + (MODEL.slices.length ? done / MODEL.slices.length * 100 : 0) + '%"></i></div></div>';
+h += '<div class="card"><h2>From your assistant</h2>' + (msgs.length ? msgs.map(m => '<div class="msg' + (m.needs ? ' needs' : '') + '"><span class="muted">' + esc(m.at) + (m.slice ? ' · ' + esc(m.slice) : '') + '</span><span>' + (m.needs ? '<b>Needs you:</b> ' : '') + esc(m.text) + '</span></div>').join('') : '<p class="muted">Nothing yet.</p>') + '</div>';
+for (const s of MODEL.slices) {
+  const p = P.slices[s.name] || {}; const st = p.status || "todo";
+  h += '<div class="card ' + s.kind + '"><div class="row"><h2><code>' + esc(s.name) + '</code> <span class="muted">' + s.kind + (s.kind === "command" ? ' → <span class="ev">' + esc((s.produces || []).join(", ")) + '</span>' : ' from ' + esc((s.reads || []).join(", "))) + '</span></h2><span class="st ' + st + '">' + esc(st) + '</span></div>';
+  if (p.note) h += '<p>' + esc(p.note) + '</p>';
+  s.scenarios.forEach((c, i) => {
+    const r = (p.scenarios || [])[i] || "todo";
+    const then = c.then.event ? '<span class="ev">' + esc(c.then.event) + '</span>' : c.then.refused != null ? 'refused: “' + esc(c.then.refused) + '”' : 'shows ' + esc(c.then.shows);
+    h += '<div class="sc"><span class="d ' + r + '" title="' + r + '"></span><span><b>Given</b> ' + (c.given.length ? c.given.map(g => '<span class="ev">' + esc(g) + '</span>').join(", ") : 'nothing') + ' · <b>When</b> <code>' + esc(c.when) + '</code> · <b>Then</b> ' + then + '</span></div>';
+  });
+  h += '</div>';
+}
+h += '<p class="muted">Made with itsybit EVE: Event modeling · Vertical slices · Event sourcing.</p>';
+document.getElementById("book").innerHTML = h;
+${SC}
+</body></html>
+`;
+}
+
+function modelObj(S) {
+  return ({
+    app: S.name, idea: S.idea, stack: S.stack, store: S.store,
+    events: S.events.map(e => ({ name: e.name, fields: fieldsOf(e.fields) })),
+    slices: buildOrder(S).map(sl => ({
+      name: sl.name, kind: sl.kind, fields: fieldsOf(sl.fields),
+      ...(sl.kind === "command" ? { produces: sl.emits.map(id => evName(S, id)) } : { reads: sl.reads.map(id => evName(S, id)) }),
+      scenarios: scenariosFor(S, sl).map(sc => ({
+        given: orderedGiven(S, sc.given).map(id => evName(S, id)),
+        when: sl.kind === "command" ? sl.name : "open " + sl.name,
+        then: sl.kind === "view" ? { shows: sc.shows } : sc.outcome === "event" ? { event: evName(S, thenEvent(sl, sc)) } : { refused: sc.reason }
+      }))
+    }))
+  });
+}
+
+function buildPack(S) {
+  const files = [
+    { path: "KICKOFF.md", text: kickoffMd(S) },
+    { path: "CLAUDE.md", text: claudeMd(S) },
+    { path: "docs/model.json", text: modelJson(S) },
+    { path: "docs/event-book.html", text: eventBookHtml(S) },
+    { path: "docs/progress.js", text: progressJs(S) }
+  ];
+  for (const sl of buildOrder(S)) files.push({ path: "docs/slices/" + sl.name + ".md", text: sliceSpec(S, sl) });
+  return files;
+}
+
+function bundle(files) {
+  return "Create these files in the project folder exactly as written, then do what KICKOFF.md says.\n\n" +
+    files.map(f => "===== " + f.path + " =====\n" + f.text).join("\n");
+}
+
+/* ---------- rendering ---------- */
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]));
+}
+
+function viewHeader(S, G) {
+  const gapsN = G.filter(g => g.sev === "gap").length;
+  const cmds = S.slices.filter(s => s.kind === "command").length, views = S.slices.length - cmds;
+  return `<header class="top"><div class="wrap">
+    <div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div><h1>itsybit EVE</h1><small><span title="Event modeling · Vertical slices · Event sourcing"><b style="color:var(--command)">E</b>vent modeling · <b style="color:var(--view)">V</b>ertical slices · <b style="color:var(--event)">E</b>vent sourcing</span> · ${esc(S.name || "Untitled")}${S.example ? " (example)" : ""}</small></div></div>
+    <div class="status" aria-label="Model summary">
+      <span class="pill"><span class="dot" style="background:var(--event)"></span>${S.events.length} events</span>
+      <span class="pill"><span class="dot" style="background:var(--command)"></span>${cmds} commands</span>
+      <span class="pill"><span class="dot" style="background:var(--view)"></span>${views} views</span>
+      <span class="pill">${S.scenarios.length} scenarios</span>
+      ${gapsN ? `<a class="pill bad" href="#pack">${gapsN} gap${gapsN > 1 ? "s" : ""}</a>` : `<span class="pill ok">Ready to build</span>`}
+    </div></div></header>`;
+}
+
+function viewTabs(tab) {
+  return `<nav class="steps" aria-label="Steps"><div class="wrap">${TABS.map(([id, label], i) =>
+    `<a href="#${id}" ${id === tab ? 'aria-current="page"' : ""}><b>${i + 1}</b>${label}</a>`).join("")}</div></nav>`;
+}
+
+function viewIdea(S) {
+  return `<div class="grid2">
+    <section class="stack">
+      <div class="lede"><h2>What are you building?</h2>
+        <p>Say it the way you'd tell a friend. The next steps turn it into events, slices and tests your AI assistant can build from.</p></div>
+      <div class="card">
+        <label class="f" for="idea-name">App name<input type="text" id="idea-name" data-ch="idea" data-k="name" value="${esc(S.name)}"></label>
+        <label class="f" for="idea-text">The idea<textarea id="idea-text" data-ch="idea" data-k="idea" rows="5">${esc(S.idea)}</textarea></label>
+        <div class="row">
+          <label class="f grow" for="idea-stack">Stack<select id="idea-stack" data-ch="idea" data-k="stack">
+            ${Object.entries(STACKS).map(([k, v]) => `<option value="${k}" ${k === S.stack ? "selected" : ""}>${esc(v.label)}</option>`).join("")}</select></label>
+          <label class="f grow" for="idea-store">Event store<select id="idea-store" data-ch="idea" data-k="store">
+            <option value="jsonl" ${S.store === "jsonl" ? "selected" : ""}>JSON Lines file</option>
+            <option value="sqlite" ${S.store === "sqlite" ? "selected" : ""}>SQLite table</option></select></label>
+        </div>
+      </div>
+      <div class="row">
+        <a class="btn primary" href="#events">Next: events</a>
+        ${ui.confirmReset
+          ? `<span class="confirm"><span class="hint warn">This clears the model in this browser.</span>
+             <button class="btn danger" data-act="reset-yes">Start blank</button>
+             <button class="btn" data-act="reset-example">Load the example</button>
+             <button class="btn quiet" data-act="reset-no">Keep it</button></span>`
+          : `<button class="btn quiet" data-act="reset-ask">Start a new model…</button>`}
+      </div>
+    </section>
+    <aside class="card">
+      <h3>The method</h3>
+      <ol class="method">
+        <li><span><strong>Events</strong>: what happens in the app, as facts in the past tense.</span></li>
+        <li><span><strong>Slices</strong>: the command that causes each event, and the views that show them.</span></li>
+        <li><span><strong>Scenarios</strong>: Given these events, When this happens, Then that. One set per slice.</span></li>
+        <li><span><strong>Starter pack</strong>: files your assistant builds from, one slice and one test at a time.</span></li>
+      </ol>
+      <p class="hint">Everything you change is itself recorded as an event. Open the event log in the bottom-left corner to watch it.</p>
+    </aside>
+  </div>`;
+}
+
+function viewEvents(S) {
+  return `<div class="lede"><h2>Events</h2>
+    <p>Everything that can happen, in the order it usually happens. Name each one as a fact: <code>PlantListed</code>, not <code>ListPlant</code>. Fields are what you'd need to remember about it.</p></div>
+    <div class="stack">
+    ${S.events.map((e, i) => `<div class="card kind-event">
+      <div class="row"><span class="num">${i + 1}</span><span class="tag event">Event</span>
+        <input type="text" class="name grow" aria-label="Event name" id="ev-name-${e.id}" data-ch="event" data-id="${e.id}" data-k="name" value="${esc(e.name)}">
+        <button class="btn quiet" data-act="ev-up" data-id="${e.id}" aria-label="Move ${esc(e.name)} earlier" ${i === 0 ? "disabled" : ""}>↑</button>
+        <button class="btn quiet" data-act="ev-down" data-id="${e.id}" aria-label="Move ${esc(e.name)} later" ${i === S.events.length - 1 ? "disabled" : ""}>↓</button>
+        <button class="btn quiet danger" data-act="ev-del" data-id="${e.id}">Remove</button></div>
+      <label class="f" for="ev-fields-${e.id}">Fields<input type="text" id="ev-fields-${e.id}" data-ch="event" data-id="${e.id}" data-k="fields" value="${esc(e.fields)}" placeholder="orderId, customerId, total"></label>
+      ${looksLikeFact(e.name) ? "" : `<p class="hint warn">Does this read as something that happened? Facts usually end in -ed: ${esc(e.name)}ed.</p>`}
+    </div>`).join("")}
+    <form class="addbar" data-form="event">
+      <label class="f grow" for="new-ev-name">New event<input type="text" class="name" id="new-ev-name" placeholder="SwapCancelled" required></label>
+      <label class="f grow" for="new-ev-fields">Fields<input type="text" id="new-ev-fields" placeholder="swapId, reason"></label>
+      <button class="btn primary" type="submit">Add event</button>
+    </form>
+    <div class="row"><a class="btn primary" href="#slices">Next: slices</a></div>
+    </div>`;
+}
+
+function chipsFor(S, selected, act, id, label) {
+  if (!S.events.length) return `<span class="hint">Add events first.</span>`;
+  return `<div class="chips" role="group" aria-label="${esc(label)}">${S.events.map(e =>
+    `<button type="button" class="chip" data-act="${act}" data-id="${id}" data-ev="${e.id}" aria-pressed="${selected.includes(e.id)}">${esc(e.name)}</button>`).join("")}</div>`;
+}
+
+function sliceCard(S, sl) {
+  const isCmd = sl.kind === "command";
+  return `<div class="card kind-${sl.kind}">
+    <div class="row"><span class="tag ${sl.kind}">${isCmd ? "Command" : "View"}</span>
+      <input type="text" class="name grow" aria-label="Slice name" id="sl-name-${sl.id}" data-ch="slice" data-id="${sl.id}" data-k="name" value="${esc(sl.name)}">
+      <button class="btn quiet danger" data-act="sl-del" data-id="${sl.id}">Remove</button></div>
+    <label class="f" for="sl-fields-${sl.id}">${isCmd ? "What the person sends" : "What the screen shows"}
+      <input type="text" id="sl-fields-${sl.id}" data-ch="slice" data-id="${sl.id}" data-k="fields" value="${esc(sl.fields)}"></label>
+    <div class="f">${isCmd ? "Produces" : "Built from"}
+      ${chipsFor(S, isCmd ? sl.emits : sl.reads, isCmd ? "sl-emit" : "sl-read", sl.id, isCmd ? "Events it produces" : "Events it reads")}</div>
+  </div>`;
+}
+
+function viewSlices(S) {
+  const cmds = S.slices.filter(s => s.kind === "command"), views = S.slices.filter(s => s.kind === "view");
+  return `<div class="lede"><h2>Slices</h2>
+    <p>A slice is one thing a person can do (a command) or see (a view). Each becomes its own folder with its own rules and tests, so your assistant changes one without breaking the others.</p></div>
+    <div class="stack">
+      <div class="section-h"><h3>Commands</h3><span class="hint">Every event needs a command that produces it.</span></div>
+      ${cmds.map(sl => sliceCard(S, sl)).join("") || `<p class="hint">No commands yet.</p>`}
+      <div class="section-h"><h3>Views</h3><span class="hint">What people see, worked out from the events.</span></div>
+      ${views.map(sl => sliceCard(S, sl)).join("") || `<p class="hint">No views yet.</p>`}
+      <form class="addbar" data-form="slice">
+        <label class="f" for="new-sl-kind">Kind<select id="new-sl-kind"><option value="command">Command</option><option value="view">View</option></select></label>
+        <label class="f grow" for="new-sl-name">Name<input type="text" class="name" id="new-sl-name" placeholder="CancelSwap" required></label>
+        <button class="btn primary" type="submit">Add slice</button>
+      </form>
+      <div class="row"><a class="btn primary" href="#scenarios">Next: scenarios</a></div>
+    </div>`;
+}
+
+function scenarioBlock(S, sl, sc, i) {
+  const isCmd = sl.kind === "command";
+  const title = isCmd ? scenarioLabel(sl, sc, i) : "Scenario " + (i + 1);
+  let then;
+  if (!isCmd) {
+    then = `<input type="text" aria-label="What the view shows" id="sc-shows-${sc.id}" data-ch="scenario" data-id="${sc.id}" data-k="shows" value="${esc(sc.shows)}" placeholder="the plant, with its species">`;
+  } else if (sc.outcome === "event") {
+    then = sl.emits.length
+      ? `<select aria-label="Event produced" id="sc-then-${sc.id}" data-ch="scenario" data-id="${sc.id}" data-k="then">${sl.emits.map(id =>
+          `<option value="${id}" ${id === thenEvent(sl, sc) ? "selected" : ""}>${esc(evName(S, id))}</option>`).join("")}</select>`
+      : `<span class="hint warn">Pick the event ${esc(sl.name)} produces on the Slices step.</span>`;
+  } else {
+    then = `<span class="tag command" style="background:transparent;border:1px solid var(--line);color:var(--warn)">Refused</span>
+      <input type="text" class="grow" aria-label="Reason it is refused" id="sc-reason-${sc.id}" data-ch="scenario" data-id="${sc.id}" data-k="reason" value="${esc(sc.reason)}" placeholder="The reason the person sees">`;
+  }
+  return `<div class="gwt">
+    <div class="title"><strong>${esc(title)}</strong>
+      <button class="btn quiet danger" data-act="sc-del" data-id="${sc.id}">Remove</button></div>
+    <span class="k">Given</span><div class="v">${S.events.map(e =>
+      `<button type="button" class="chip" data-act="sc-given" data-id="${sc.id}" data-ev="${e.id}" aria-pressed="${sc.given.includes(e.id)}">${esc(e.name)}</button>`).join("")}
+      ${sc.given.length ? "" : `<span class="nothing">nothing yet</span>`}</div>
+    <span class="k">When</span><div class="v"><code>${isCmd ? esc(sl.name) : "someone opens " + esc(sl.name)}</code></div>
+    <span class="k">Then</span><div class="v">${then}</div>
+  </div>`;
+}
+
+function viewScenarios(S) {
+  const order = buildOrder(S);
+  return `<div class="lede"><h2>Scenarios</h2>
+    <p>Each scenario becomes a test before any code is written. Every command starts with its happy case; tap events under Given to say what has already happened, then add a refusal for each way it can go wrong.</p></div>
+    <div class="stack">
+    ${order.map(sl => {
+      const list = scenariosFor(S, sl);
+      const hasHappy = list.some(x => x.outcome === "event");
+      return `<div class="card kind-${sl.kind}">
+        <div class="row"><span class="tag ${sl.kind}">${sl.kind === "command" ? "Command" : "View"}</span><h3 class="grow mono">${esc(sl.name)}</h3>
+          <span class="hint">${list.length} scenario${list.length === 1 ? "" : "s"}</span></div>
+        ${list.map((sc, i) => scenarioBlock(S, sl, sc, i)).join("")}
+        <div class="row">
+          ${sl.kind === "command"
+            ? `${hasHappy ? "" : `<button class="btn primary" data-act="sc-add" data-id="${sl.id}" data-outcome="event">Add the happy case</button>`}
+               <button class="btn" data-act="sc-add" data-id="${sl.id}" data-outcome="refused">Add a refusal</button>`
+            : `<button class="btn" data-act="sc-add" data-id="${sl.id}" data-outcome="shows">Add a scenario</button>`}
+        </div>
+      </div>`;
+    }).join("") || `<p class="hint">Add slices first.</p>`}
+    <div class="row"><a class="btn primary" href="#pack">Next: starter pack</a></div>
+    </div>`;
+}
+
+function viewPack(S, G) {
+  const files = buildPack(S);
+  const f = files.find(x => x.path === ui.file) || files[0];
+  const order = buildOrder(S);
+  const real = G.filter(g => g.sev === "gap"), notes = G.filter(g => g.sev === "note");
+  return `<div class="lede"><h2>Starter pack</h2>
+    <p>Copy the whole pack and paste it into your AI assistant (Claude Code, Cursor, anything) in an empty folder. It creates the files, then builds one slice at a time, tests first. It reports back in <code>docs/event-book.html</code>: your plan, frozen, with a status on every scenario and a message whenever it needs you.</p></div>
+    <div class="grid2" style="margin-bottom:16px">
+      <div class="card"><h3>${real.length ? "Before you build" : "The model holds together"}</h3>
+        ${G.length ? `<div class="gaps">${real.concat(notes).map(g =>
+          `<div class="gap"><span class="dot" style="background:${g.sev === "gap" ? "var(--warn)" : "var(--muted)"}"></span><a href="#${g.tab}">${esc(g.text)}</a></div>`).join("")}</div>`
+          : `<p class="hint">Every event has a command that produces it and a view that shows it, and every slice has scenarios.</p>`}
+        <div class="row"><button class="btn primary" data-act="copy-all">Copy the whole pack</button>
+          <span class="hint">${files.length} files</span></div>
+      </div>
+      <div class="card"><h3>Build order</h3>
+        <ol class="order">${order.map(s => `<li><span style="color:var(--${s.kind})">■</span> ${esc(s.name)}</li>`).join("")}</ol>
+        <p class="hint">Commands in timeline order, then views.</p></div>
+    </div>
+    <div class="files">
+      <div class="filelist" role="list">${files.map(x =>
+        `<button data-act="file" data-path="${esc(x.path)}" aria-current="${x.path === f.path}">${esc(x.path)}</button>`).join("")}</div>
+      <div class="preview"><div class="bar"><span>${esc(f.path)}</span><button class="btn" data-act="copy-file" data-path="${esc(f.path)}">Copy</button></div>
+        <pre id="file-pre" tabindex="0">${esc(f.text)}</pre></div>
+    </div>
+    <details class="card" style="margin-top:16px"><summary><strong>Load a model from JSON</strong></summary>
+      <p class="hint">Paste a <code>docs/model.json</code> from an earlier pack to keep working on it.</p>
+      <label class="sr" for="import-json">Model JSON</label><textarea id="import-json" placeholder='{"app": "…", "events": […], "slices": […]}'></textarea>
+      <div class="row"><button class="btn" data-act="import">Load it</button><span class="hint" id="import-msg"></span></div>
+    </details>`;
+}
+
+function viewLog() {
+  const pill = `<button class="logpill" data-act="log-toggle" aria-expanded="${ui.logOpen}"><span class="dot"></span>Event log · ${log.length}</button>`;
+  if (!ui.logOpen) return pill;
+  const summary = e => {
+    const d = e.data || {};
+    return d.name || d.reason || d.shows || d.outcome || (d.emits && "produces") || (d.reads && "reads") || (d.given && "given") || d.id || "";
+  };
+  return pill + `<div class="logpanel" role="dialog" aria-label="Event log"><header><span>This model is ${log.length} events, replayed on every load</span>
+    <button data-act="undo" ${log.length < 2 ? "disabled" : ""}>Undo last</button></header>
+    <ol>${log.map((e, i) => ({ e, i })).reverse().map(({ e, i }) =>
+      `<li><span>${i + 1}</span><div><em>${esc(e.type)}</em> ${esc(summary(e))}</div></li>`).join("")}</ol></div>`;
+}
+
+function currentTab() {
+  const h = location.hash.replace("#", "");
+  return TABS.some(t => t[0] === h) ? h : "idea";
+}
+
+function renderHtml(tab) {
+  const S = fold(log), G = gaps(S);
+  const body = { idea: viewIdea, events: viewEvents, slices: viewSlices, scenarios: viewScenarios, pack: viewPack }[tab](S, G);
+  return viewHeader(S, G) + viewTabs(tab) + `<main><div class="wrap">${body}</div></main>` + viewLog() +
+    (ui.toast ? `<div class="toast" role="status">${esc(ui.toast)}</div>` : "");
+}
+
+/* ---------- browser wiring ---------- */
+function save() { try { localStorage.setItem(KEY, JSON.stringify(log)); } catch (e) { /* storage unavailable: keep working in memory */ } }
+function load() {
+  try { const raw = localStorage.getItem(KEY); if (raw) log = JSON.parse(raw); } catch (e) { log = []; }
+  if (!Array.isArray(log) || !log.length) log = exampleLog();
+}
+function render() {
+  const app = document.getElementById("app");
+  const focusId = document.activeElement && document.activeElement.id;
+  app.innerHTML = renderHtml(currentTab());
+  if (focusId) { const el = document.getElementById(focusId); if (el) el.focus(); }
+}
+function record(type, data) { log.push({ type, data, at: now() }); save(); render(); }
+let toastTimer;
+function toast(msg) { ui.toast = msg; render(); clearTimeout(toastTimer); toastTimer = setTimeout(() => { ui.toast = ""; render(); }, 2600); }
+
+async function copyText(text, label) {
+  try { await navigator.clipboard.writeText(text); toast(label + " copied"); }
+  catch (e) {
+    const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand("copy"); } catch (_) {}
+    ta.remove();
+    toast(ok ? label + " copied" : "Copying was blocked here. Select the text and press Ctrl+C.");
+  }
+}
+
+function importModel(text) {
+  const m = JSON.parse(text);
+  if (!m || !Array.isArray(m.events) || !Array.isArray(m.slices)) throw new Error("It needs an events list and a slices list.");
+  const entries = [{ type: "ModelStarted", data: { name: m.app || "Imported app", idea: m.idea || "", stack: STACKS[m.stack] ? m.stack : "ts", store: STORES[m.store] ? m.store : "jsonl" }, at: now() }];
+  const ids = {};
+  for (const e of m.events) { const id = uid(); ids[e.name] = id; entries.push({ type: "EventAdded", data: { id, name: e.name, fields: (e.fields || []).join(", ") }, at: now() }); }
+  for (const sl of m.slices) {
+    const id = uid(), kind = sl.kind === "view" ? "view" : "command";
+    entries.push({ type: "SliceAdded", data: { id, kind, name: sl.name, fields: (sl.fields || []).join(", "),
+      emits: (sl.produces || []).map(n => ids[n]).filter(Boolean), reads: (sl.reads || []).map(n => ids[n]).filter(Boolean) }, at: now() });
+    for (const sc of sl.scenarios || []) {
+      const t = sc.then || {};
+      entries.push({ type: "ScenarioAdded", data: { id: uid(), sliceId: id,
+        outcome: kind === "view" ? "shows" : ("refused" in t ? "refused" : "event"),
+        given: (sc.given || []).map(n => ids[n]).filter(Boolean), then: ids[t.event] || "", reason: t.refused || "", shows: t.shows || "" }, at: now() });
+    }
+  }
+  return entries;
+}
+
+function boot() {
+  load();
+  const app = document.getElementById("app");
+  window.addEventListener("hashchange", () => { ui.confirmReset = false; render(); window.scrollTo(0, 0); });
+
+  app.addEventListener("change", ev => {
+    const el = ev.target, ch = el.dataset.ch; if (!ch) return;
+    const k = el.dataset.k, v = el.value;
+    if (ch === "idea") record("IdeaEdited", { [k]: v });
+    else if (ch === "event") { if (k === "name" && !v.trim()) return render(); record("EventEdited", { id: el.dataset.id, [k]: v.trim() }); }
+    else if (ch === "slice") { if (k === "name" && !v.trim()) return render(); record("SliceEdited", { id: el.dataset.id, [k]: v.trim() }); }
+    else if (ch === "scenario") record("ScenarioEdited", { id: el.dataset.id, [k]: v });
+  });
+
+  app.addEventListener("submit", ev => {
+    ev.preventDefault();
+    const form = ev.target.dataset.form;
+    if (form === "event") {
+      const name = document.getElementById("new-ev-name").value.trim().replace(/\s+/g, "");
+      if (!name) return;
+      record("EventAdded", { id: uid(), name, fields: document.getElementById("new-ev-fields").value.trim() });
+      const el = document.getElementById("new-ev-name"); if (el) el.focus();
+    } else if (form === "slice") {
+      const name = document.getElementById("new-sl-name").value.trim().replace(/\s+/g, "");
+      const kind = document.getElementById("new-sl-kind").value;
+      if (!name) return;
+      const id = uid();
+      log.push({ type: "SliceAdded", data: { id, kind, name, fields: "", emits: [], reads: [] }, at: now() });
+      if (kind === "command") log.push({ type: "ScenarioAdded", data: { id: uid(), sliceId: id, outcome: "event", given: [], then: "" }, at: now() });
+      save(); render();
+    }
+  });
+
+  app.addEventListener("click", ev => {
+    const el = ev.target.closest("[data-act]"); if (!el) return;
+    const act = el.dataset.act, id = el.dataset.id, S = fold(log);
+    const toggle = (list, x) => list.includes(x) ? list.filter(i => i !== x) : list.concat(x);
+    switch (act) {
+      case "ev-up": return record("EventMoved", { id, by: -1 });
+      case "ev-down": return record("EventMoved", { id, by: 1 });
+      case "ev-del": return record("EventRemoved", { id });
+      case "sl-del": return record("SliceRemoved", { id });
+      case "sl-emit": { const sl = S.slices.find(s => s.id === id); return record("SliceEdited", { id, emits: toggle(sl.emits, el.dataset.ev) }); }
+      case "sl-read": { const sl = S.slices.find(s => s.id === id); return record("SliceEdited", { id, reads: toggle(sl.reads, el.dataset.ev) }); }
+      case "sc-given": { const sc = S.scenarios.find(s => s.id === id); return record("ScenarioEdited", { id, given: toggle(sc.given, el.dataset.ev) }); }
+      case "sc-add": return record("ScenarioAdded", { id: uid(), sliceId: id, outcome: el.dataset.outcome, given: [], then: "", reason: "", shows: "" });
+      case "sc-del": return record("ScenarioRemoved", { id });
+      case "reset-ask": ui.confirmReset = true; return render();
+      case "reset-no": ui.confirmReset = false; return render();
+      case "reset-yes": ui.confirmReset = false; log = blankLog(); save(); return render();
+      case "reset-example": ui.confirmReset = false; log = exampleLog(); save(); return render();
+      case "log-toggle": ui.logOpen = !ui.logOpen; return render();
+      case "undo": if (log.length > 1) { log.pop(); save(); render(); } return;
+      case "file": ui.file = el.dataset.path; return render();
+      case "copy-file": { const f = buildPack(S).find(x => x.path === el.dataset.path); return copyText(f.text, f.path); }
+      case "copy-all": return copyText(bundle(buildPack(S)), "The whole pack");
+      case "import": {
+        const msg = document.getElementById("import-msg");
+        try { log = importModel(document.getElementById("import-json").value); save(); ui.file = "CLAUDE.md"; render(); toast("Model loaded"); }
+        catch (e) { msg.textContent = "That didn't load: " + (e.message || "it isn't valid JSON") + "."; }
+        return;
+      }
+    }
+  });
+
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape" && ui.logOpen) { ui.logOpen = false; render(); } });
+  render();
+}
+
+if (typeof document !== "undefined") boot();
+</script>
+</body>
+</html>
