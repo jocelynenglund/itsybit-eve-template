@@ -1,4 +1,17 @@
 {
-  "version": "2026-11-01.10",
-  "note": "Bump this (YYYY-MM-DD, or YYYY-MM-DD.2 for a second release that day) whenever eve/, the eve-* skills, AGENTS.md or sample/ change, so people see that a newer EVE is out."
+  "version": "2026-11-01.11",
+  "note": "For maintainers: on every release, bump version (YYYY-MM-DD, then .2, .3 … for more releases that day) and add an entry at the top of releases, in words the person using EVE understands.",
+  "releases": [
+    { "version": "2026-11-01.11", "notes": ["Updates now come with release notes, here and in the Event Book.", "The Event Book notices newer versions again (2026-11-01.10 was missed)."] },
+    { "version": "2026-11-01.10", "notes": ["Refusals show as a red “refused” chip, like the event chips."] },
+    { "version": "2026-11-01.9", "notes": ["Refusals and failing tests are red, no longer orange like events."] },
+    { "version": "2026-11-01.8", "notes": ["The Event Book is easier to read: clearer disabled button, greyed resolved threads, shorter lines on wide screens."] },
+    { "version": "2026-11-01.7", "notes": ["Links in the Event Book use the accent colour."] },
+    { "version": "2026-11-01.6", "notes": ["The itsyBIT EVE logo in the Event Book header and as its tab icon."] },
+    { "version": "2026-11-01.5", "notes": ["The Event Book in the itsyBIT studio look."] },
+    { "version": "2026-11-01.4", "notes": ["A Look and feel card in the Event Book.", "“make it beautiful” asks your design tool for three directions to pick from."] },
+    { "version": "2026-11-01.3", "notes": ["Named the ItsyBIT EVE Template."] },
+    { "version": "2026-11-01.2", "notes": ["“make it beautiful”: your plan becomes a design brief for your design tool, and the app gets the look you pick."] },
+    { "version": "2026-11-01", "notes": ["“update EVE”: newer tools without touching your plan or app.", "Built slices fold away when you plan a new feature."] }
+  ]
 }
