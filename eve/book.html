@@ -91,6 +91,13 @@ textarea{min-height:64px;resize:vertical}
 .chip{font:500 13px/1.2 var(--mono);border:1px dashed var(--line);background:transparent;border-radius:6px;padding:4px 7px;cursor:pointer;color:var(--muted)}
 .chip[aria-pressed="true"]{border-style:solid;border-color:color-mix(in srgb,var(--event) 60%,var(--line));background:color-mix(in srgb,var(--event) 16%,var(--surface));color:var(--ink)}
 .chips{display:flex;flex-wrap:wrap;gap:5px}
+.look{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:10px;padding:12px 14px;display:grid;gap:8px}
+.look .chip{font-family:var(--body)}
+.look .chip[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.swatch{display:inline-flex;gap:4px;align-items:center}
+.swatch input[type=color]{width:38px;height:30px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer}
+.dot-sw{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid var(--line);vertical-align:-2px}
 label.f{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
 .bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);z-index:5}
 .bar .wrap{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding-top:10px;padding-bottom:10px}
@@ -110,7 +117,7 @@ const POLL_MS = 4000;
 
 let model = null, modelText = "", built = null, builtText = "", loadError = "";
 let draft = { events: [], sent: "" };
-const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false, openDone: new Set() };
+const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false, openDone: new Set(), lookForm: null };
 
 /* ---------- loading ---------- */
 async function fetchText(path) {
@@ -135,7 +142,7 @@ async function loadAll(first) {
   } catch (e) { /* not built yet */ }
   if (first || !busy()) render();
 }
-function busy() { return !!(ui.compose || ui.addFor); }
+function busy() { return !!(ui.compose || ui.addFor || ui.lookForm); }
 function indexBuilt(b) {
   const map = new Map();
   for (const f of b.files || []) for (const s of f.scenarios || []) map.set(s.slice + "\u0000" + s.title, s);
@@ -159,7 +166,9 @@ function view() {
   const added = [];
   const refined = {};
   for (const sl of model.slices || []) refined[sl.id] = !!sl.refined;
+  let look = model.look || null, lookNew = false;
   for (const e of draft.events) {
+    if (e.type === "LookAndFeelSet") { look = e.data; lookNew = true; }
     const d = e.data;
     if (e.type === "CommentAdded") comments.push({ id: d.commentId, sliceId: d.sliceId, scenarioId: d.scenarioId, part: d.part, threadId: d.threadId, author: "you", text: d.text, at: d.at, draft: true });
     if (e.type === "CommentResolved") { const c = comments.find(x => x.id === d.commentId); if (c) { c.resolved = true; c.resolvedNow = true; } }
@@ -167,14 +176,15 @@ function view() {
     if (e.type === "SliceMarkedRefined") refined[d.sliceId] = true;
     if (e.type === "SliceRefinedCleared") refined[d.sliceId] = false;
   }
-  return { comments, added, refined };
+  return { comments, added, refined, look, lookNew };
 }
 function counts() {
-  const c = { comments: 0, scenarios: 0, ticks: 0, resolved: 0 };
+  const c = { comments: 0, scenarios: 0, ticks: 0, resolved: 0, look: 0 };
   for (const e of draft.events) {
     if (e.type === "CommentAdded") c.comments++;
     else if (e.type === "ScenarioAdded") c.scenarios++;
     else if (e.type === "CommentResolved") c.resolved++;
+    else if (e.type === "LookAndFeelSet") c.look = 1;
     else c.ticks++;
   }
   return c;
@@ -218,6 +228,7 @@ function render() {
       ${ui.message ? `<div class="note new" role="status">${esc(ui.message)}</div>` : ""}
       ${ui.eveUpdate ? `<div class="note new"><strong>A newer EVE is out</strong> (${esc(ui.eveUpdate)}).<p>Tell your AI: <b>update EVE</b>. It updates the tools and leaves your plan and app alone.</p></div>` : ""}
       ${intro(allRefined, b, done.size && open.length)}
+      ${renderLook(V)}
       ${renderThreads(V, t => !t.sliceId, "General comments")}
       ${!locked() ? composerOrButton({ kind: "board" }, "Add a general comment") : ""}
       ${chapters.map(ch => renderChapter(ch, slices.filter(s => s.chapter === ch), V, done)).join("")}
@@ -389,6 +400,7 @@ function renderBar() {
   if (c.scenarios) parts.push(c.scenarios + " new scenario" + (c.scenarios > 1 ? "s" : ""));
   if (c.ticks) parts.push(c.ticks + " Refined change" + (c.ticks > 1 ? "s" : ""));
   if (c.resolved) parts.push(c.resolved + " resolved");
+  if (c.look) parts.push("look and feel");
   return `<div class="bar"><div class="wrap">
     <span class="muted">${parts.length ? "Your feedback this round: " + parts.join(" · ") : "No feedback yet this round."}</span>
     <button class="btn primary" data-act="done" ${parts.length && !ui.saving ? "" : "disabled"}>${ui.saving ? "Saving…" : "Done with feedback"}</button>
@@ -440,6 +452,11 @@ document.addEventListener("click", ev => {
     case "add-given": readForm(); ui.form.given.push(el.dataset.event); render(); break;
     case "add-given-clear": readForm(); ui.form.given = []; render(); break;
     case "done": finish(); break;
+    case "look-open": { const L = view().look; ui.lookForm = { ...blankLook(), ...(L || {}), moods: [...((L && L.moods) || [])], colours: [...((L && L.colours) || [])] }; ui.compose = null; ui.addFor = null; render(); break; }
+    case "look-cancel": ui.lookForm = null; render(); break;
+    case "look-mood": { readLookForm(); const m = el.dataset.mood, ms = ui.lookForm.moods; ms.includes(m) ? ms.splice(ms.indexOf(m), 1) : ms.push(m); render(); break; }
+    case "look-colour-add": readLookForm(); ui.lookForm.colours.push("#3f76db"); render(); focus("look-colour-" + (ui.lookForm.colours.length - 1)); break;
+    case "look-colour-drop": readLookForm(); ui.lookForm.colours.splice(+el.dataset.i, 1); render(); break;
     case "toggle-done": { const k = el.dataset.key; ui.openDone.has(k) ? ui.openDone.delete(k) : ui.openDone.add(k); render(); break; }
     case "reload": ui.newRound = false; ui.compose = null; ui.addFor = null; modelText = ""; loadAll(true); break;
   }
@@ -469,6 +486,12 @@ document.addEventListener("submit", ev => {
     if (c.threadId) data.threadId = c.threadId;
     ui.compose = null;
     add("CommentAdded", data);
+  } else if (form === "look") {
+    readLookForm();
+    const f = ui.lookForm, data = { ...f, likes: f.likes.trim(), where: f.where.trim(), notes: f.notes.trim() };
+    ui.lookForm = null;
+    draft.events = draft.events.filter(e => e.type !== "LookAndFeelSet");
+    add("LookAndFeelSet", data);
   } else if (form === "scenario") {
     readForm();
     const f = ui.form, sl = model.slices.find(s => s.id === ui.addFor), k = kindOf(sl);
@@ -479,6 +502,61 @@ document.addEventListener("submit", ev => {
     add("ScenarioAdded", { scenarioId: uid("s"), sliceId: sl.id, name: f.title.trim(), given: f.given.map(t => ({ type: t })), when: sl.name, then });
   }
 });
+
+/* ---------- look and feel: what "make it beautiful" designs from ---------- */
+const MOODS = ["Calm", "Playful", "Bold", "Minimal", "Warm", "Cosy", "Elegant", "Techy", "Fresh", "Serious"];
+const TYPES = ["Rounded and friendly", "Clean and modern", "Classic, with serifs", "Handwritten", "Typewriter / code"];
+const THEMES = [["light", "Light"], ["dark", "Dark"], ["both", "Both (follow the device)"], ["", "No preference"]];
+const DEVICES = [["phone", "Mostly on a phone"], ["laptop", "Mostly on a laptop"], ["both", "Both"]];
+const blankLook = () => ({ moods: [], colours: [], theme: "", type: "", likes: "", device: "", where: "", notes: "" });
+
+function lookSummary(L) {
+  const bits = [];
+  if (L.moods && L.moods.length) bits.push(L.moods.map(esc).join(", "));
+  if (L.colours && L.colours.length) bits.push(L.colours.map(c => `<span class="dot-sw" style="background:${esc(c)}" title="${esc(c)}"></span>`).join(" "));
+  const theme = THEMES.find(t => t[0] === L.theme && t[0]); if (theme) bits.push(esc(theme[1]));
+  if (L.type) bits.push(esc(L.type));
+  const dev = DEVICES.find(d => d[0] === L.device); if (dev) bits.push(esc(dev[1]) + (L.where ? ", " + esc(L.where) : ""));
+  else if (L.where) bits.push(esc(L.where));
+  if (L.likes) bits.push("like " + esc(L.likes));
+  return bits.join(" · ");
+}
+function renderLook(V) {
+  const L = V.look;
+  if (ui.lookForm) return renderLookForm();
+  const has = L && lookSummary(L);
+  return `<section class="look" aria-label="Look and feel">
+    <div class="row spread"><strong>Look and feel</strong>${!locked() ? `<button class="btn quiet" data-act="look-open">${has ? "Change" : "Fill in"}</button>` : ""}</div>
+    ${has ? `<p>${lookSummary(L)}${V.lookNew ? ` <span class="muted">(not sent yet)</span>` : ""}</p>${L.notes ? `<p class="muted">${esc(L.notes)}</p>` : ""}`
+      : `<p class="muted">How should your app feel? Your AI designs from this when you say <b>make it beautiful</b>. Fill it in any time.</p>`}
+  </section>`;
+}
+function renderLookForm() {
+  const f = ui.lookForm;
+  const radio = (name, opts, cur) => opts.map(([v, l]) => `<label><input type="radio" name="${name}" value="${esc(v)}" ${cur === v ? "checked" : ""}> ${esc(l)}</label>`).join("");
+  return `<form class="look" data-form="look" aria-label="Look and feel">
+    <strong>Look and feel</strong>
+    <div class="f"><span class="muted">How should it feel? Pick any.</span><div class="chips">${MOODS.map(m => `<button type="button" class="chip" data-act="look-mood" data-mood="${esc(m)}" aria-pressed="${f.moods.includes(m)}">${esc(m)}</button>`).join("")}</div></div>
+    <div class="f"><span class="muted">Colours you like (up to 4)</span><div class="swatches">
+      ${f.colours.map((c, i) => `<span class="swatch"><input type="color" id="look-colour-${i}" value="${esc(c)}" aria-label="Colour ${i + 1}"><button type="button" class="btn quiet" data-act="look-colour-drop" data-i="${i}" aria-label="Remove colour ${i + 1}">✕</button></span>`).join("")}
+      ${f.colours.length < 4 ? `<button type="button" class="btn quiet" data-act="look-colour-add">+ Add a colour</button>` : ""}</div></div>
+    <div class="f"><span class="muted">Light or dark</span><div class="row">${radio("look-theme", THEMES, f.theme)}</div></div>
+    <div class="f"><span class="muted">Lettering</span><div class="row">${radio("look-type", TYPES.map(t => [t, t]).concat([["", "No preference"]]), f.type)}</div></div>
+    <label class="f" for="look-likes">Apps or sites whose look you like<input type="text" id="look-likes" placeholder="e.g. Notion, the IKEA app, a link" value="${esc(f.likes)}"></label>
+    <div class="f"><span class="muted">Where it gets used</span><div class="row">${radio("look-device", DEVICES, f.device)}</div>
+      <input type="text" id="look-where" placeholder="e.g. in a cold storage room, one hand full" value="${esc(f.where)}" aria-label="Where it gets used"></div>
+    <label class="f" for="look-notes">Anything else<textarea id="look-notes" placeholder="e.g. big buttons, nothing too cute">${esc(f.notes)}</textarea></label>
+    <div class="row"><button class="btn primary" type="submit">Save look and feel</button><button class="btn quiet" type="button" data-act="look-cancel">Cancel</button></div>
+  </form>`;
+}
+function readLookForm() {
+  const f = ui.lookForm; if (!f) return;
+  const v = id => { const el = document.getElementById(id); return el ? el.value : ""; };
+  const r = name => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ""; };
+  f.colours = f.colours.map((c, i) => v("look-colour-" + i) || c);
+  f.theme = r("look-theme"); f.type = r("look-type"); f.device = r("look-device");
+  f.likes = v("look-likes"); f.where = v("look-where"); f.notes = v("look-notes");
+}
 
 function readForm() {
   const f = ui.form; if (!f) return;
