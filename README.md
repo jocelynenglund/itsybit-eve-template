@@ -70,6 +70,10 @@ When EVE gets better, your Event Book says so. Tell your AI **"update EVE"**, or
 
 The Event Book's files use the same names as the full Event Book app (`CommentAdded`, `ScenarioAdded`, `SliceMarkedRefined`, and Given/When/Then scenario exports), but you don't need anything beyond this repo.
 
+## Credits
+
+**Event Modeling** is [Adam Dymitruk](https://eventmodeling.org)'s method: planning a system as a timeline of events, the commands that cause them and the views that show them, with Given/When/Then scenarios for each slice. EVE's Event Book and planning loop are built on it. Read more at [eventmodeling.org](https://eventmodeling.org).
+
 ## For maintainers
 
 Bump `eve/version.json` (a date: `2026-11-01`, then `2026-11-01.2`, `.3` … for more releases that day) and add a line to its `releases` (what changed, in the words of someone using EVE) whenever `eve/`, the `eve-*` skills, `AGENTS.md` or `sample/` change. That's how people's Event Books know there's a newer EVE. `eve/update.mjs` downloads `main`, so keep `main` working, and keep reading old `plan/model.json` files.
