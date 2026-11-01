@@ -244,6 +244,7 @@ function render() {
     <main><div class="wrap stack">
       ${ui.newRound ? `<div class="note new"><strong>A new round is ready.</strong><div class="row"><button class="btn primary" data-act="reload">Show the new round</button><span class="muted">Finish what you're typing first; it's saved.</span></div></div>` : ""}
       ${ui.message ? `<div class="note new" role="status">${esc(ui.message)}</div>` : ""}
+      ${ui.eveUpdated ? `<div class="note new" role="status"><p><strong>EVE was updated.</strong> <span class="muted">You now have ${esc(ui.eveUpdated.version)}.</span></p>${ui.eveUpdated.notes.length ? `<ul class="eve-notes">${ui.eveUpdated.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}<div><button class="btn" data-act="eve-seen">Got it</button></div></div>` : ""}
       ${ui.eveUpdate ? `<div class="note new"><p><strong>A newer EVE is out.</strong> <span class="muted">${esc(ui.eveUpdate)}.</span></p>${ui.eveNotes && ui.eveNotes.length ? `<ul class="eve-notes">${ui.eveNotes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}<p>Tell your AI: <b>update EVE</b>. It updates the tools and leaves your plan and app alone.</p></div>` : ""}
       ${intro(allRefined, b, done.size && open.length)}
       ${renderLook(V)}
@@ -475,6 +476,7 @@ document.addEventListener("click", ev => {
     case "look-mood": { readLookForm(); const m = el.dataset.mood, ms = ui.lookForm.moods; ms.includes(m) ? ms.splice(ms.indexOf(m), 1) : ms.push(m); render(); break; }
     case "look-colour-add": readLookForm(); ui.lookForm.colours.push("#3f76db"); render(); focus("look-colour-" + (ui.lookForm.colours.length - 1)); break;
     case "look-colour-drop": readLookForm(); ui.lookForm.colours.splice(+el.dataset.i, 1); render(); break;
+    case "eve-seen": try { localStorage.setItem("eve-seen-version", ui.eveUpdated.version); } catch (e) {} ui.eveUpdated = null; render(); break;
     case "toggle-done": { const k = el.dataset.key; ui.openDone.has(k) ? ui.openDone.delete(k) : ui.openDone.add(k); render(); break; }
     case "reload": ui.newRound = false; ui.compose = null; ui.addFor = null; modelText = ""; loadAll(true); break;
   }
@@ -593,12 +595,31 @@ addEventListener("scroll", () => {
 }, { passive: true });
 checkEveVersion();
 
+// After "update EVE": say once what's new, from this copy's own release notes. A first visit just remembers the version.
+function showUpdatedNotes(local) {
+  try {
+    const KEY = "eve-seen-version", seen = localStorage.getItem(KEY), mine = local.version || "";
+    if (!seen) { localStorage.setItem(KEY, mine); return; }
+    const key = v => { const m = /^(\d{4}-\d{2}-\d{2})(?:\.(\d+))?/.exec(v || ""); return m ? [m[1], +(m[2] || 1)] : ["", 0]; };
+    const newer = (a, b) => { const x = key(a), y = key(b); return x[0] !== y[0] ? x[0] > y[0] : x[1] > y[1]; };
+    if (!newer(mine, seen)) return;
+    ui.eveUpdated = { version: mine, notes: (local.releases || []).filter(r => newer(r.version, seen)).flatMap(r => r.notes || []).slice(0, 8) };
+    render();
+  } catch (e) { /* no storage: skip */ }
+}
 // Say when a newer EVE is out. Only when running on someone's own machine; quiet when offline.
 async function checkEveVersion() {
   if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
   try {
-    const mine = (await (await fetch("version.json", { cache: "no-cache" })).json()).version || "";
-    const remote = await (await fetch("https://raw.githubusercontent.com/jocelynenglund/itsybit-eve-template/main/eve/version.json", { cache: "no-cache" })).json();
+    const local = await (await fetch("version.json", { cache: "no-store" })).json();
+    const mine = local.version || "";
+    showUpdatedNotes(local);
+    // GitHub's API serves the file fresh (60 requests an hour per network); its raw file server can lag minutes behind.
+    const api = "https://api.github.com/repos/jocelynenglund/itsybit-eve-template/contents/eve/version.json";
+    const raw = "https://raw.githubusercontent.com/jocelynenglund/itsybit-eve-template/main/eve/version.json";
+    let res = await fetch(api, { headers: { Accept: "application/vnd.github.raw+json" }, cache: "no-store" }).catch(() => null);
+    if (!res || !res.ok) res = await fetch(raw, { cache: "no-store" });
+    const remote = await res.json();
     const latest = remote.version || "";
     // "2026-11-01.10" is newer than "2026-11-01.9": compare the date, then the release number.
     const key = v => { const m = /^(\d{4}-\d{2}-\d{2})(?:\.(\d+))?/.exec(v || ""); return m ? [m[1], +(m[2] || 1)] : ["", 0]; };

@@ -1,7 +1,14 @@
 {
-  "version": "2026-11-01.13",
+  "version": "2026-11-01.14",
   "note": "For maintainers: on every release, bump version (YYYY-MM-DD, then .2, .3 … for more releases that day) and add an entry at the top of releases, in words the person using EVE understands.",
   "releases": [
+    {
+      "version": "2026-11-01.14",
+      "notes": [
+        "After an update, the Event Book says once what's new.",
+        "The Event Book hears about a new EVE right away, not up to five minutes later."
+      ]
+    },
     {
       "version": "2026-11-01.13",
       "notes": [
