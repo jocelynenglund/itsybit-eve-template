@@ -59,6 +59,10 @@ main{padding:18px 0 120px}
 .refined.on{border-color:var(--pass);color:var(--pass)}
 .badge{font:600 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.05em;padding:4px 7px;border-radius:5px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
 .badge.pass{color:var(--pass);border-color:var(--pass)} .badge.fail{color:var(--fail);border-color:var(--fail)}
+.slice.done{padding:8px 14px;box-shadow:none}
+.done-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.done-row .name{color:var(--muted);font-weight:600} .done-row .chev{margin-left:auto;color:var(--muted);font-size:13px}
+.chapter.done-ch>h2 .muted{text-transform:none;letter-spacing:0;font-weight:500}
 .sc{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:6px}
 .sc-title{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .sc-title strong{font-size:14px;display:flex;gap:8px;align-items:center}
@@ -106,7 +110,7 @@ const POLL_MS = 4000;
 
 let model = null, modelText = "", built = null, builtText = "", loadError = "";
 let draft = { events: [], sent: "" };
-const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false };
+const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false, openDone: new Set() };
 
 /* ---------- loading ---------- */
 async function fetchText(path) {
@@ -189,6 +193,11 @@ function render() {
   const slices = model.slices || [];
   const nRefined = slices.filter(s => V.refined[s.id]).length;
   const allRefined = slices.length > 0 && nRefined === slices.length;
+  // Fold built slices only while there's something new to read; a finished book shows everything.
+  let done = new Set(slices.filter(s => isDone(s, V)).map(s => s.id));
+  if (done.size === slices.length) done = new Set();
+  const open = slices.filter(s => !done.has(s.id));
+  const nOpenRefined = open.filter(s => V.refined[s.id]).length;
   const b = builtSummary();
   const chapters = (model.chapters || []).map(c => c.name);
   for (const s of slices) if (s.chapter && !chapters.includes(s.chapter)) chapters.push(s.chapter);
@@ -198,23 +207,27 @@ function render() {
       <div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i><i></i></div>
         <div><h1>${esc(model.app || "Your app")} · Event Book</h1><small>Round ${esc(model.round || 1)}${model.idea ? " · " + esc(model.idea) : ""}</small></div></div>
       <div class="pills">
-        <span class="pill ${allRefined ? "ok" : ""}">${nRefined} of ${slices.length} slices refined</span>
+        ${done.size && open.length
+          ? `<span class="pill ${allRefined ? "ok" : ""}">${nOpenRefined} of ${open.length} new ${open.length === 1 ? "slice" : "slices"} refined</span><span class="pill ok">${done.size} built</span>`
+          : `<span class="pill ${allRefined ? "ok" : ""}">${nRefined} of ${slices.length} slices refined</span>`}
         ${b.total ? `<span class="pill ${b.passing === b.total ? "ok" : ""}">${b.passing} of ${b.total} scenarios pass</span>` : ""}
         ${b.any ? `<a class="pill link" href="${esc(ROOT)}app/">Open the app</a>` : ""}
       </div></div></header>
     <main><div class="wrap stack">
       ${ui.newRound ? `<div class="note new"><strong>A new round is ready.</strong><div class="row"><button class="btn primary" data-act="reload">Show the new round</button><span class="muted">Finish what you're typing first; it's saved.</span></div></div>` : ""}
       ${ui.message ? `<div class="note new" role="status">${esc(ui.message)}</div>` : ""}
-      ${intro(allRefined, b)}
+      ${intro(allRefined, b, done.size && open.length)}
       ${renderThreads(V, t => !t.sliceId, "General comments")}
       ${!locked() ? composerOrButton({ kind: "board" }, "Add a general comment") : ""}
-      ${chapters.map(ch => `<section class="chapter"><h2>${esc(ch)}</h2>${slices.filter(s => s.chapter === ch).map(s => renderSlice(s, V)).join("")}</section>`).join("")}
-      ${orphans.length ? `<section class="chapter"><h2>Other</h2>${orphans.map(s => renderSlice(s, V)).join("")}</section>` : ""}
+      ${chapters.map(ch => renderChapter(ch, slices.filter(s => s.chapter === ch), V, done)).join("")}
+      ${orphans.length ? `<section class="chapter"><h2>Other</h2>${orphans.map(s => done.has(s.id) ? renderDone(s, V) : renderSlice(s, V)).join("")}</section>` : ""}
     </div></main>
     ${renderBar()}`;
 }
 
-function intro(allRefined, b) {
+function intro(allRefined, b, followUp) {
+  if (followUp && !allRefined) return `<div class="note"><p>The new slices are open below; the ones already built are folded away (tap one to open it). Comment on the new ones, add the scenarios you're missing, and tick <b>Refined</b> when a slice is right. Then press <b>Done with feedback</b> and tell your AI <b>done</b>.</p></div>`;
+  if (followUp && allRefined && !draft.events.length && b.passing < b.total) return `<div class="note go"><strong>The new slices are refined.</strong><p>Tell your AI: <b>start building</b>.</p></div>`;
   if (b.total && b.passing === b.total && allRefined) return `<div class="note go"><strong>Built.</strong><p>Every planned scenario passes. <a href="${esc(ROOT)}app/">Open the app</a>.</p></div>`;
   if (b.any) return `<div class="note"><strong>Building.</strong><p>Green dots are scenarios with a passing test. This page updates by itself as your AI works.</p></div>`;
   if (allRefined && !draft.events.length) return `<div class="note go"><strong>Every slice is refined.</strong><p>Tell your AI: <b>start building</b>.</p></div>`;
@@ -232,7 +245,29 @@ function builtSummary() {
   return { total: any ? total : 0, passing, any };
 }
 
-function renderSlice(sl, V) {
+// Built: refined, every planned scenario passes, and nothing in this round's draft touches it.
+function isDone(sl, V) {
+  const scen = sl.scenarios || [];
+  if (!V.refined[sl.id] || !scen.length || !built || !built.map.size) return false;
+  if (!scen.every(sc => { const r = built.map.get(sl.name + "\u0000" + sc.title); return r && r.passing; })) return false;
+  if (V.added.some(a => a.sliceId === sl.id)) return false;
+  return !V.comments.some(c => c.sliceId === sl.id && c.draft);
+}
+function renderChapter(ch, list, V, done) {
+  const allDone = list.length && list.every(s => done.has(s.id));
+  const isOpen = ui.openDone.has("ch:" + ch);
+  if (allDone && !isOpen) return `<section class="chapter done-ch"><h2><button class="done-row" data-act="toggle-done" data-key="${esc("ch:" + ch)}" aria-expanded="false">${esc(ch)} <span class="muted">· ${list.length} built</span><span class="chev">▸ show</span></button></h2></section>`;
+  const head = allDone ? `<h2><button class="done-row" data-act="toggle-done" data-key="${esc("ch:" + ch)}" aria-expanded="true">${esc(ch)} <span class="muted">· ${list.length} built</span><span class="chev">▾ hide</span></button></h2>` : `<h2>${esc(ch)}</h2>`;
+  return `<section class="chapter ${allDone ? "done-ch" : ""}">${head}${list.map(s => done.has(s.id) && !allDone ? renderDone(s, V) : renderSlice(s, V)).join("")}</section>`;
+}
+function renderDone(sl, V) {
+  if (ui.openDone.has(sl.id)) return renderSlice(sl, V, true);
+  const k = kindOf(sl);
+  return `<article class="slice ${k} done" id="slice-${esc(sl.id)}"><button class="done-row" data-act="toggle-done" data-key="${esc(sl.id)}" aria-expanded="false">
+    <span class="tag ${k}">${kindLabel[k]}</span><span class="mono name">${esc(sl.name)}</span><span class="badge pass">Built</span><span class="chev">▸ show</span></button></article>`;
+}
+
+function renderSlice(sl, V, folded) {
   const k = kindOf(sl), on = V.refined[sl.id];
   const scen = sl.scenarios || [];
   let badge = "";
@@ -247,7 +282,7 @@ function renderSlice(sl, V) {
   return `<article class="slice ${k} ${on ? "is-refined" : ""}" id="slice-${esc(sl.id)}">
     <div class="row spread">
       <div class="row"><span class="tag ${k}">${kindLabel[k]}</span><h3 class="mono">${esc(sl.name)}</h3>${flow}</div>
-      <div class="row">${badge}
+      <div class="row">${badge}${folded ? `<button class="btn quiet" data-act="toggle-done" data-key="${esc(sl.id)}" aria-expanded="true">▾ hide</button>` : ""}
         <label class="refined ${on ? "on" : ""}"><input type="checkbox" data-act="refine" data-slice="${esc(sl.id)}" ${on ? "checked" : ""} ${locked() ? "disabled" : ""}>Refined</label></div>
     </div>
     ${sl.fields && sl.fields.length ? `<p class="muted">${k === "view" ? "Shows" : "Needs"}: ${sl.fields.map(esc).join(", ")}</p>` : ""}
@@ -404,6 +439,7 @@ document.addEventListener("click", ev => {
     case "add-given": readForm(); ui.form.given.push(el.dataset.event); render(); break;
     case "add-given-clear": readForm(); ui.form.given = []; render(); break;
     case "done": finish(); break;
+    case "toggle-done": { const k = el.dataset.key; ui.openDone.has(k) ? ui.openDone.delete(k) : ui.openDone.add(k); render(); break; }
     case "reload": ui.newRound = false; ui.compose = null; ui.addFor = null; modelText = ""; loadAll(true); break;
   }
 });

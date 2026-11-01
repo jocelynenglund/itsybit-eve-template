@@ -1,9 +1,14 @@
 ---
 name: eve-plan
-description: Plan a new app the EVE way (event modeling, vertical slices, event sourcing) and serve its Event Book for feedback. Use when the person says "let's plan <an app>", "plan a todo app", "I want to build …", or describes an app idea.
+description: Plan a new app the EVE way (event modeling, vertical slices, event sourcing) and serve its Event Book for feedback. Use when the person says "let's plan <an app>", "plan a todo app", "I want to build …", or describes an app idea. Also when they ask for a new feature in an app that is already planned or built.
 ---
 
 # Plan an app
+
+**Adding to an app that's already planned?** If `plan/model.json` already has slices, don't start over:
+- Keep every existing slice, scenario and comment as it is. Add the new slices (usually in a new chapter), each `refined: false`, happy case first, as below.
+- If the new feature changes a slice that's already there, add or change its scenarios, set that slice back to `refined: false`, and say why in an `ai` comment on it.
+- Add `round` by one. Then serve the book and tell them as in steps 4 and 5. The book folds the slices that are already built, so they'll see the new ones first.
 
 1. **Ask, briefly.** At most three short questions in one message: who uses it, the few things they do in it, and anything it must refuse. If the idea is already clear, or they say "you decide", skip this and decide.
 2. **Write `plan/model.json`** in the exact shape of `sample/todo/plan/model.json` (see AGENTS.md → The plan format):
