@@ -14,6 +14,7 @@ A starting point for building an app with your AI assistant. You and the AI agre
 4. Tell the AI **"done"**. It reads your round (`plan/feedback/round-N.json`), answers every comment, updates the plan, and the book shows the next round. Repeat until every slice is refined.
 5. Say **"start building"**. The AI builds each slice like `sample/todo/`: tests from your scenarios first, then the code. The book turns each scenario green as its test passes.
 6. Open **http://localhost:4747/app/**. That's your app.
+7. Say **"make it beautiful"**. The AI turns your plan into a design brief (every screen, action and message, with example content) and sends it to your design tool, or gives it to you to paste into one: Claude Design, Figma, v0, Lovable, whatever you use. What comes back restyles the app, and every test still has to pass.
 
 You need [Node](https://nodejs.org) 18 or newer. There's nothing to install.
 
@@ -26,9 +27,10 @@ When EVE gets better, your Event Book says so. Tell your AI **"update EVE"**, or
 | Path | What it is |
 |---|---|
 | `AGENTS.md` | How the AI works in this repo: the loop, the plan format, the code rules. `CLAUDE.md` loads it for Claude Code. |
-| `.claude/skills/` | `eve-plan`, `eve-refine`, `eve-build`: the step-by-step for each phase. Plain markdown, so other assistants can follow them too. |
+| `.claude/skills/` | `eve-plan`, `eve-refine`, `eve-build`, `eve-design`: the step-by-step for each phase. Plain markdown, so other assistants can follow them too. |
 | `eve/book.html` | The Event Book. |
 | `eve/serve.mjs` | Serves the book and your app, and saves your feedback rounds. `node eve/serve.mjs` |
+| `eve/brief.mjs` | Writes `plan/design-brief.md`, your plan as a brief for a design tool. `node eve/brief.mjs` |
 | `eve/update.mjs` | Updates the EVE tools to the newest version, leaving your plan and app alone. `node eve/update.mjs` |
 | `eve/test.mjs` | Runs your app's tests, writes `plan/built.json`, and says how many planned scenarios pass. `node eve/test.mjs` |
 | `sample/todo/` | A small app planned and built this way: its plan, its feedback threads and its code. Try `node eve/serve.mjs sample/todo`. |
