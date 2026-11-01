@@ -1,8 +1,10 @@
-# ItsyBIT EVE Template
+# ItsyBIT EVE Template · beta
 
 ![ItsyBIT EVE Template: Vibe code responsibly. Event Modeling, Vertical Slices, Event Sourcing.](site/share/share.png)
 
 **E**vent modeling · **V**ertical slices · **E**vent sourcing
+
+> **Beta.** It works end to end (plan, refine, build, make it beautiful, update), and it is still changing. Tell your AI **update EVE** now and then; your plan and app are never touched.
 
 A starting point for building an app with your AI assistant. You and the AI agree on a plan first, in an **Event Book** you can comment on. Then the AI builds it slice by slice, tests first, and you open the finished app in your browser.
 
