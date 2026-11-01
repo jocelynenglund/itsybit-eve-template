@@ -216,6 +216,7 @@ function render() {
     <main><div class="wrap stack">
       ${ui.newRound ? `<div class="note new"><strong>A new round is ready.</strong><div class="row"><button class="btn primary" data-act="reload">Show the new round</button><span class="muted">Finish what you're typing first; it's saved.</span></div></div>` : ""}
       ${ui.message ? `<div class="note new" role="status">${esc(ui.message)}</div>` : ""}
+      ${ui.eveUpdate ? `<div class="note new"><strong>A newer itsybit EVE is out</strong> (${esc(ui.eveUpdate)}).<p>Tell your AI: <b>update EVE</b>. It updates the tools and leaves your plan and app alone.</p></div>` : ""}
       ${intro(allRefined, b, done.size && open.length)}
       ${renderThreads(V, t => !t.sliceId, "General comments")}
       ${!locked() ? composerOrButton({ kind: "board" }, "Add a general comment") : ""}
@@ -488,6 +489,17 @@ function readForm() {
 function focus(id) { const el = document.getElementById(id); if (el) el.focus(); }
 
 loadAll(true);
+checkEveVersion();
+
+// Say when a newer itsybit EVE is out. Only when running on someone's own machine; quiet when offline.
+async function checkEveVersion() {
+  if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
+  try {
+    const mine = (await (await fetch("version.json", { cache: "no-cache" })).json()).version || "";
+    const latest = (await (await fetch("https://raw.githubusercontent.com/jocelynenglund/itsybit-eve-template/main/eve/version.json", { cache: "no-cache" })).json()).version || "";
+    if (latest > mine) { ui.eveUpdate = mine ? `you have ${mine}, the newest is ${latest}` : `the newest is ${latest}`; render(); }
+  } catch (e) { /* offline, or an older copy without version.json */ }
+}
 setInterval(() => loadAll(false), POLL_MS);
 </script>
 </body>
