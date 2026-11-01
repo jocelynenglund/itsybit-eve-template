@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Update the EVE tools in this folder to the newest itsybit EVE, without touching your app or plan.
+// Update the EVE tools in this folder to the newest EVE, without touching your app or plan.
 //   node eve/update.mjs            update
 //   node eve/update.mjs --check    only say whether a newer EVE is out
-//   node eve/update.mjs --from <folder>   update from a local copy of itsybit EVE instead of GitHub
+//   node eve/update.mjs --from <folder>   update from a local copy of the ItsyBIT EVE Template instead of GitHub
 //
 // Replaced: eve/, .claude/skills/eve-*/, AGENTS.md and sample/ (EVE's own files).
 // Never touched: app/ and plan/ (yours). One exception: app/lib/gwt.mjs and app/lib/store.js are
@@ -84,7 +84,7 @@ const versionOf = files => { try { return JSON.parse(files.get("eve/version.json
 const same = (a, b) => a && b && Buffer.compare(a, b) === 0;
 
 const upstream = await readUpstream();
-if (!upstream.has("eve/book.html")) fail("That doesn't look like itsybit EVE (no eve/book.html).");
+if (!upstream.has("eve/book.html")) fail("That doesn't look like the ItsyBIT EVE Template (no eve/book.html).");
 const local = readLocal(root);
 const was = versionOf(local), now = versionOf(upstream);
 
@@ -103,11 +103,11 @@ for (const [mine, sample] of Object.entries(COPIED)) {
 
 const label = v => v ? `EVE ${v}` : "an older EVE";
 if (!changed.length && !added.length && !removed.length && !helpers.length) {
-  console.log(`You have the newest itsybit EVE${now ? ` (${now})` : ""}. Nothing to update.`);
+  console.log(`You have the newest EVE${now ? ` (${now})` : ""}. Nothing to update.`);
   process.exit(0);
 }
 if (checkOnly) {
-  console.log(`A newer itsybit EVE is out: ${label(was)} → ${label(now)} (${changed.length + added.length + removed.length + helpers.length} files). Run: node eve/update.mjs`);
+  console.log(`A newer EVE is out: ${label(was)} → ${label(now)} (${changed.length + added.length + removed.length + helpers.length} files). Run: node eve/update.mjs`);
   process.exit(0);
 }
 
@@ -119,7 +119,7 @@ for (const p of removed) {
   for (let d = path.dirname(path.join(root, p)); d.startsWith(root + path.sep) && fs.readdirSync(d).length === 0; d = path.dirname(d)) fs.rmdirSync(d);
 }
 
-console.log(`Updated itsybit EVE: ${label(was)} → ${label(now)}. Your app/ and plan/ weren't touched.`);
+console.log(`Updated EVE: ${label(was)} → ${label(now)}. Your app/ and plan/ weren't touched.`);
 const list = (title, xs) => xs.length && console.log(`${title}:\n  ${xs.join("\n  ")}`);
 list("Changed", changed); list("New", added); list("Removed", removed); list("Updated helpers in app/lib (you hadn't changed them)", helpers);
 list(`Kept your own version (yours differs from EVE's; compare with ${"sample/todo/app/lib/"})`, kept);

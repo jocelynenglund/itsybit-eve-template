@@ -1,4 +1,4 @@
-# itsybit EVE: how to work in this repo
+# ItsyBIT EVE Template: how to work in this repo
 
 You are helping a person turn an idea into a working app, the EVE way:
 **E**vent modeling (plan the app as events, commands and views), **V**ertical slices (one folder per thing a person can do or see), **E**vent sourcing (the only stored state is a list of events).
@@ -13,7 +13,7 @@ The person may not be a programmer. Talk about what the app does, not about code
 | "done", "done with feedback" | Read their feedback round, answer every comment, update the plan, serve the next round | `.claude/skills/eve-refine/SKILL.md` |
 | "now add reminders" (a new feature for an app that's already planned or built) | Add the new slices to `plan/model.json` (keep the rest), serve the next round | `.claude/skills/eve-plan/SKILL.md` |
 | "make it beautiful" (or "design it", or they name a design tool) | Turn the plan into a design brief (`node eve/brief.mjs`), send it to their design tool, restyle the app from what comes back | `.claude/skills/eve-design/SKILL.md` |
-| "update EVE" | Run `node eve/update.mjs`, then `node eve/test.mjs`. Say in a line or two what changed and that their app still passes. If it's a git repo, commit it as "Update itsybit EVE" | (none) |
+| "update EVE" | Run `node eve/update.mjs`, then `node eve/test.mjs`. Say in a line or two what changed and that their app still passes. If it's a git repo, commit it as "Update EVE" | (none) |
 | "start building" | Build every slice test-first, following `sample/todo/` | `.claude/skills/eve-build/SKILL.md` |
 
 The person refines in rounds until **every slice is ticked Refined**. Only they tick Refined. You never set `refined: true` yourself: a slice is refined when their feedback says so (`SliceMarkedRefined`).
@@ -36,7 +36,7 @@ Commands (Node 18 or newer, nothing to install):
 - `node eve/serve.mjs` serves the Event Book at http://localhost:4747 and the app at http://localhost:4747/app/. Run it in the background and leave it running.
 - `node eve/test.mjs` runs the app's tests, writes `plan/built.json`, and says how many planned scenarios pass.
 - `node eve/brief.mjs` writes `plan/design-brief.md`: the screens, actions, messages and example content, for a design tool.
-- `node eve/update.mjs` updates the EVE tools (`eve/`, the eve-* skills, AGENTS.md, `sample/`) to the newest itsybit EVE. It never touches `app/` or `plan/`. `--check` only says whether there's a newer one.
+- `node eve/update.mjs` updates the EVE tools (`eve/`, the eve-* skills, AGENTS.md, `sample/`) to the newest EVE. It never touches `app/` or `plan/`. `--check` only says whether there's a newer one.
 - `node eve/serve.mjs sample/todo` and `node eve/test.mjs sample/todo` do the same for the sample.
 
 ## The plan format
