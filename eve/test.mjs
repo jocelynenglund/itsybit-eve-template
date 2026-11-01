@@ -68,7 +68,7 @@ if (model) {
     total++;
     const r = results.get(key(sl.name, sc.title));
     if (!r) missing.push(`${sl.name}: ${sc.title}`);
-    else if (!r.passing) failing.push(`${sl.name}: ${sc.title}`);
+    else if (!r.passing) failing.push(`${sl.name}: ${sc.title}` + (/not built yet/i.test(r.error || "") ? " (not built yet)" : ""));
     else passing++;
   }
   console.log(`\nEVE: ${passing} of ${total} planned scenarios pass.`);
