@@ -45,6 +45,11 @@ ol.loop li{background:var(--surface);border:1px solid var(--line);border-radius:
 ol.loop li::before{counter-increment:s;content:counter(s);position:absolute;left:14px;top:12px;width:26px;height:26px;border-radius:7px;background:var(--accent);color:var(--surface);font:600 14px/26px var(--mono);text-align:center}
 ol.loop q{font-weight:600;quotes:"“" "”"}
 pre{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;margin:0;overflow-x:auto}
+.chat{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.chat li{display:grid;gap:4px}
+.chat .say{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--command);border-radius:10px;padding:10px 14px;font-weight:500}
+.chat .say::before{content:"You  ";font:600 12px var(--mono);color:var(--command);text-transform:uppercase;letter-spacing:.06em;white-space:pre}
+.chat .then{color:var(--muted);font-size:15px;padding:0 6px 6px 18px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
 .card{display:grid;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;text-decoration:none;color:inherit}
 .card:hover{border-color:var(--accent)} .card strong{color:var(--accent)} .card span{color:var(--muted);font-size:14px}
@@ -80,6 +85,17 @@ cd my-app
 claude            # or Cursor, Codex, any assistant that reads AGENTS.md
 &gt; let's plan a todo app</pre>
     <p>You need <a href="https://nodejs.org">Node</a> 18 or newer; there's nothing to install. When EVE gets better, your Event Book says so: tell your AI <q>update EVE</q>. It never touches your plan or your app.</p>
+  </section>
+  <section>
+    <h2>A real session</h2>
+    <p>A storage-box tracker, built in an afternoon. These are the messages the person typed, word for word:</p>
+    <ol class="chat">
+      <li><div class="say">let's plan an app to track my boxes that i put into storage. I basically want to be able to make a qr code for my boxes that are linked to a list of things that are in it. so it makes knowing what's in the boxes easier.</div><div class="then">The AI writes the plan and opens the Event Book. They comment, add scenarios, tick Refined, and press Done with feedback.</div></li>
+      <li><div class="say">done with feedback</div><div class="then">Every comment answered, the next round served. Repeat until every slice is refined.</div></li>
+      <li><div class="say">start building</div><div class="then">Each slice built test-first; the book turns green as the tests pass. The app opens in the browser.</div></li>
+      <li><div class="say">I want to add a feature that shows me a view of which boxes i have taken things out of most often so i can maybe reorganize better.</div><div class="then">New slices join the plan. The built ones fold away in the book so the new ones stand out. Refine, then build again.</div></li>
+      <li><div class="say">make it beautiful</div><div class="then">The plan becomes a design brief for their design tool, and the app gets the new look. Every test still passes.</div></li>
+    </ol>
   </section>
 
   <section>
