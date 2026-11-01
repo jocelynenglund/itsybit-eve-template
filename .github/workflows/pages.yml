@@ -1,0 +1,34 @@
+# Publishes this repo's site (index.html, the Event Book, the sample) to GitHub Pages,
+# with whats-new.json generated from git for the What's new pill.
+# Only runs in the original repo: a copy made from the template skips it.
+name: Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.repository == 'jocelynenglund/itsybit-eve-template'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: node eve/test.mjs sample/todo
+      - run: site/whats-new.sh whats-new.json
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4
