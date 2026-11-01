@@ -1,4 +1,4 @@
-# itsybit EVE
+# ItsyBIT EVE Template
 
 **E**vent modeling · **V**ertical slices · **E**vent sourcing
 
