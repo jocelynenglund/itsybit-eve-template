@@ -8,6 +8,27 @@ A starting point for building an app with your AI assistant. You and the AI agre
 
 **See it:** [the sample's Event Book](https://jocelynenglund.github.io/itsybit-eve-template/eve/book.html?root=../sample/todo/) · [the sample app](https://jocelynenglund.github.io/itsybit-eve-template/sample/todo/app/)
 
+## TL;DR
+
+```
+git clone https://github.com/jocelynenglund/itsybit-eve-template my-app
+cd my-app
+claude        # or Cursor, Codex, any assistant that reads AGENTS.md
+```
+
+You need [Node](https://nodejs.org) 18 or newer, nothing else. Want your own repo on GitHub (it can be private)? Press **Use this template** and clone that instead.
+
+Then just talk to it. This is a real session, a storage-box tracker built in an afternoon, with every message the person typed:
+
+| You say | What happens |
+|---|---|
+| *let's plan an app to track my boxes that i put into storage. I basically want to be able to make a qr code for my boxes that are linked to a list of things that are in it. so it makes knowing what's in the boxes easier.* | The AI writes the plan and opens the Event Book at http://localhost:4747. You comment, add scenarios and tick **Refined**, then press **Done with feedback**. |
+| *done with feedback* | It answers every comment and serves the next round. Repeat until every slice is refined. |
+| *start building* | It builds each slice test-first. The book turns green as tests pass; the app is at http://localhost:4747/app/. |
+| *I want to add a feature that shows me a view of which boxes i have taken things out of most often so i can maybe reorganize better.* | It adds the new slices to the plan. Built slices fold away in the book, so the new ones stand out. Refine, then *start building* again. |
+| *make it beautiful* | It turns the plan into a design brief and sends it to your design tool, then restyles the app. Every test still has to pass. |
+| *update EVE* | It gets the newest EVE tools and leaves your plan and app alone. |
+
 ## How it goes
 
 1. **Make your own copy:** press **Use this template** on GitHub (it can be private), then clone your copy. Or download the zip. Open your AI assistant in it: Claude Code, Cursor, Codex or anything that reads `AGENTS.md`.
