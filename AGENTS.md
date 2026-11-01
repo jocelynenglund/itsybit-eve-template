@@ -11,6 +11,7 @@ The person may not be a programmer. Talk about what the app does, not about code
 |---|---|---|
 | "let's plan a todo app" (any app idea) | Write `plan/model.json`, start the Event Book, tell them to open it | `.claude/skills/eve-plan/SKILL.md` |
 | "done", "done with feedback" | Read their feedback round, answer every comment, update the plan, serve the next round | `.claude/skills/eve-refine/SKILL.md` |
+| "now add reminders" (a new feature for an app that's already planned or built) | Add the new slices to `plan/model.json` (keep the rest), serve the next round | `.claude/skills/eve-plan/SKILL.md` |
 | "start building" | Build every slice test-first, following `sample/todo/` | `.claude/skills/eve-build/SKILL.md` |
 
 The person refines in rounds until **every slice is ticked Refined**. Only they tick Refined. You never set `refined: true` yourself: a slice is refined when their feedback says so (`SliceMarkedRefined`).
