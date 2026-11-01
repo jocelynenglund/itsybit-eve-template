@@ -72,7 +72,7 @@ The Event Book's files use the same names as the full Event Book app (`CommentAd
 
 ## Credits
 
-**Event Modeling** is [Adam Dymitruk](https://eventmodeling.org)'s method: planning a system as a timeline of events, the commands that cause them and the views that show them, with Given/When/Then scenarios for each slice. EVE's Event Book and planning loop are built on it. Read more at [eventmodeling.org](https://eventmodeling.org).
+**Event Modeling** is [Adam Dymitruk](https://eventmodeling.org/about/)'s method: planning a system as a timeline of events, the commands that cause them and the views that show them, with Given/When/Then scenarios for each slice. EVE's Event Book and planning loop are built on it. Read more at [eventmodeling.org](https://eventmodeling.org/about/).
 
 ## For maintainers
 
