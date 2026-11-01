@@ -108,6 +108,8 @@ q{font:400 italic 1.1em var(--display);color:var(--bright);quotes:"“" "”"}
 footer{border-top:1px solid var(--line);margin-top:20px}
 footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px;padding-top:20px;padding-bottom:60px;color:var(--faint);font:400 13px var(--mono)}
 footer em{font:400 italic 20px var(--display);color:var(--ink)}
+footer .credit{flex-basis:100%;max-width:none;font:400 13px var(--body);color:var(--muted)}
+footer .credit a{color:var(--ink);text-decoration-color:var(--accent);text-underline-offset:3px}
 @media (max-width:520px){ .crumb{display:none} .steps li{grid-template-columns:32px 1fr} }
 @media (prefers-reduced-motion:no-preference){ .btn,.ghost,.card{transition:border-color .15s,background .15s} }
 </style>
@@ -190,6 +192,6 @@ claude            <span class="p"># or Cursor, Codex, any assistant that reads A
   </section>
 </main>
 
-<footer><div class="wrap"><em>Make it work, then make it beautiful.</em><span>ItsyBIT EVE Template · MIT</span></div></footer>
+<footer><div class="wrap"><em>Make it work, then make it beautiful.</em><span>ItsyBIT EVE Template · MIT</span><p class="credit">Event Modeling is Adam Dymitruk's method: <a href="https://eventmodeling.org">eventmodeling.org</a></p></div></footer>
 </body>
 </html>
