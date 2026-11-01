@@ -80,7 +80,17 @@ async function readUpstream() {
 }
 
 function fail(msg) { console.error(msg); process.exit(1); }
-const versionOf = files => { try { return JSON.parse(files.get("eve/version.json")).version; } catch { return null; } };
+const versionFile = files => { try { return JSON.parse(files.get("eve/version.json")); } catch { return null; } };
+const versionOf = files => (versionFile(files) || {}).version || null;
+// "2026-11-01.10" is newer than "2026-11-01.9": compare the date, then the release number.
+const versionKey = v => { const m = /^(\d{4}-\d{2}-\d{2})(?:\.(\d+))?/.exec(v || ""); return m ? [m[1], +(m[2] || 1)] : ["", 0]; };
+const newer = (a, b) => { const x = versionKey(a), y = versionKey(b); return x[0] !== y[0] ? x[0] > y[0] : x[1] > y[1]; };
+// Release notes for everything newer than the version you had (the newest three if it's unknown).
+function whatsNew(had) {
+  const rel = (versionFile(upstream) || {}).releases || [];
+  const list = had ? rel.filter(r => newer(r.version, had)) : rel.slice(0, 3);
+  return list.flatMap(r => (r.notes || []).map(n => `  - ${n} (${r.version})`));
+}
 const same = (a, b) => a && b && Buffer.compare(a, b) === 0;
 
 const upstream = await readUpstream();
@@ -108,6 +118,7 @@ if (!changed.length && !added.length && !removed.length && !helpers.length) {
 }
 if (checkOnly) {
   console.log(`A newer EVE is out: ${label(was)} → ${label(now)} (${changed.length + added.length + removed.length + helpers.length} files). Run: node eve/update.mjs`);
+  const notes = whatsNew(was); if (notes.length) console.log("What's new:\n" + notes.join("\n"));
   process.exit(0);
 }
 
@@ -120,6 +131,7 @@ for (const p of removed) {
 }
 
 console.log(`Updated EVE: ${label(was)} → ${label(now)}. Your app/ and plan/ weren't touched.`);
+{ const notes = whatsNew(was); if (notes.length) console.log("What's new:\n" + notes.join("\n")); }
 const list = (title, xs) => xs.length && console.log(`${title}:\n  ${xs.join("\n  ")}`);
 list("Changed", changed); list("New", added); list("Removed", removed); list("Updated helpers in app/lib (you hadn't changed them)", helpers);
 list(`Kept your own version (yours differs from EVE's; compare with ${"sample/todo/app/lib/"})`, kept);

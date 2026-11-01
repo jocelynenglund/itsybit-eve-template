@@ -70,7 +70,7 @@ The Event Book's files use the same names as the full Event Book app (`CommentAd
 
 ## For maintainers
 
-Bump `eve/version.json` (a date: `2026-11-01`, or `2026-11-01.2` for a second release that day) whenever `eve/`, the `eve-*` skills, `AGENTS.md` or `sample/` change. That's how people's Event Books know there's a newer EVE. `eve/update.mjs` downloads `main`, so keep `main` working, and keep reading old `plan/model.json` files.
+Bump `eve/version.json` (a date: `2026-11-01`, then `2026-11-01.2`, `.3` … for more releases that day) and add a line to its `releases` (what changed, in the words of someone using EVE) whenever `eve/`, the `eve-*` skills, `AGENTS.md` or `sample/` change. That's how people's Event Books know there's a newer EVE. `eve/update.mjs` downloads `main`, so keep `main` working, and keep reading old `plan/model.json` files.
 
 ## License
 

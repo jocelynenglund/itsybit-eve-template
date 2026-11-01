@@ -46,6 +46,7 @@ main{padding:18px 0 120px}
 .note{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:6px}
 .note.go{border-color:var(--pass);border-left:5px solid var(--pass)}
 .note.new{border-left:5px solid var(--accent)}
+.eve-notes{margin:2px 0 4px;padding-left:20px;display:grid;gap:2px;max-width:72ch}
 .chapter{display:grid;gap:10px;margin-top:10px}
 .chapter>h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .slice{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--command);border-radius:10px;padding:12px 14px;display:grid;gap:10px}
@@ -234,7 +235,7 @@ function render() {
     <main><div class="wrap stack">
       ${ui.newRound ? `<div class="note new"><strong>A new round is ready.</strong><div class="row"><button class="btn primary" data-act="reload">Show the new round</button><span class="muted">Finish what you're typing first; it's saved.</span></div></div>` : ""}
       ${ui.message ? `<div class="note new" role="status">${esc(ui.message)}</div>` : ""}
-      ${ui.eveUpdate ? `<div class="note new"><strong>A newer EVE is out</strong> (${esc(ui.eveUpdate)}).<p>Tell your AI: <b>update EVE</b>. It updates the tools and leaves your plan and app alone.</p></div>` : ""}
+      ${ui.eveUpdate ? `<div class="note new"><p><strong>A newer EVE is out.</strong> <span class="muted">${esc(ui.eveUpdate)}.</span></p>${ui.eveNotes && ui.eveNotes.length ? `<ul class="eve-notes">${ui.eveNotes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}<p>Tell your AI: <b>update EVE</b>. It updates the tools and leaves your plan and app alone.</p></div>` : ""}
       ${intro(allRefined, b, done.size && open.length)}
       ${renderLook(V)}
       ${renderThreads(V, t => !t.sliceId, "General comments")}
@@ -582,8 +583,16 @@ async function checkEveVersion() {
   if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
   try {
     const mine = (await (await fetch("version.json", { cache: "no-cache" })).json()).version || "";
-    const latest = (await (await fetch("https://raw.githubusercontent.com/jocelynenglund/itsybit-eve-template/main/eve/version.json", { cache: "no-cache" })).json()).version || "";
-    if (latest > mine) { ui.eveUpdate = mine ? `you have ${mine}, the newest is ${latest}` : `the newest is ${latest}`; render(); }
+    const remote = await (await fetch("https://raw.githubusercontent.com/jocelynenglund/itsybit-eve-template/main/eve/version.json", { cache: "no-cache" })).json();
+    const latest = remote.version || "";
+    // "2026-11-01.10" is newer than "2026-11-01.9": compare the date, then the release number.
+    const key = v => { const m = /^(\d{4}-\d{2}-\d{2})(?:\.(\d+))?/.exec(v || ""); return m ? [m[1], +(m[2] || 1)] : ["", 0]; };
+    const newer = (a, b) => { const x = key(a), y = key(b); return x[0] !== y[0] ? x[0] > y[0] : x[1] > y[1]; };
+    if (newer(latest, mine)) {
+      ui.eveUpdate = mine ? `You have ${mine}; the newest is ${latest}` : `The newest is ${latest}`;
+      ui.eveNotes = (remote.releases || []).filter(r => !mine || newer(r.version, mine)).flatMap(r => r.notes || []).slice(0, 6);
+      render();
+    }
   } catch (e) { /* offline, or an older copy without version.json */ }
 }
 setInterval(() => loadAll(false), POLL_MS);
