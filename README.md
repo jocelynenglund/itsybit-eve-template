@@ -37,7 +37,7 @@ Then just talk to it. This is a real session, a storage-box tracker built in an 
 4. Tell the AI **"done"**. It reads your round (`plan/feedback/round-N.json`), answers every comment, updates the plan, and the book shows the next round. Repeat until every slice is refined.
 5. Say **"start building"**. The AI builds each slice like `sample/todo/`: tests from your scenarios first, then the code. The book turns each scenario green as its test passes.
 6. Open **http://localhost:4747/app/**. That's your app.
-7. Fill in **Look and feel** at the top of the Event Book (the mood, colours, apps you like the look of, where it gets used), then say **"make it beautiful"**. The AI turns your plan and your look into a design brief, asks your design tool for three directions to pick from (or makes them itself) (every screen, action and message, with example content). Your design tool is Claude Design, Figma, v0, Lovable, whatever you use. The one you pick restyles the app, and every test still has to pass.
+7. Fill in **Look and feel** at the top of the Event Book (the mood, colours, apps you like the look of, where it gets used), then say **"make it beautiful"**. The AI turns your plan and your look into a design brief: every screen, action and message, with example content. Your design tool (Claude Design, Figma, v0, Lovable, whatever you use) makes three directions from it, or the AI makes them itself. The one you pick restyles the app, and every test still has to pass.
 
 You need [Node](https://nodejs.org) 18 or newer. There's nothing to install.
 
