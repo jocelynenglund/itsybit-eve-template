@@ -51,13 +51,15 @@ for (const s of scenarios) {
   if (!byFile.has(file)) byFile.set(file, []);
   byFile.get(file).push(s);
 }
-const built = {
-  app: model?.app || path.basename(root),
-  createdAt: new Date().toISOString(),
-  files: [...byFile].map(([file, list]) => ({ file, scenarios: list }))
-};
+const app = model?.app || path.basename(root);
+const builtFiles = [...byFile].map(([file, list]) => ({ file, scenarios: list }));
+// Keep the old time when nothing changed, so re-running the tests leaves git clean.
+const builtPath = path.join(planDir, "built.json");
+const previous = (() => { try { return JSON.parse(fs.readFileSync(builtPath, "utf8")); } catch { return null; } })();
+const unchanged = previous && previous.app === app && JSON.stringify(previous.files) === JSON.stringify(builtFiles);
+const built = { app, createdAt: unchanged ? previous.createdAt : new Date().toISOString(), files: builtFiles };
 fs.mkdirSync(planDir, { recursive: true });
-fs.writeFileSync(path.join(planDir, "built.json"), JSON.stringify(built, null, 2) + "\n");
+fs.writeFileSync(builtPath, JSON.stringify(built, null, 2) + "\n");
 
 if (model) {
   const key = (slice, title) => `${slice}\u0000${title}`;
