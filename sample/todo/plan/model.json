@@ -1,0 +1,75 @@
+{
+  "app": "Todo",
+  "idea": "A simple list of things to do. Add a todo, tick it off when it's done, remove it when it no longer matters.",
+  "round": 3,
+  "chapters": [
+    { "name": "Todos" }
+  ],
+  "events": [
+    { "name": "TodoAdded", "fields": ["todoId", "title"] },
+    { "name": "TodoCompleted", "fields": ["todoId"] },
+    { "name": "TodoRemoved", "fields": ["todoId"] }
+  ],
+  "slices": [
+    {
+      "id": "add-todo",
+      "name": "AddTodo",
+      "type": "command",
+      "chapter": "Todos",
+      "fields": ["todoId", "title"],
+      "produces": ["TodoAdded"],
+      "refined": true,
+      "scenarios": [
+        { "id": "add-todo-1", "title": "Adds a todo", "given": [], "when": "AddTodo", "then": { "events": [{ "type": "TodoAdded" }] } },
+        { "id": "add-todo-2", "title": "Refuses an empty title", "given": [], "when": "AddTodo", "then": { "rejected": "Title is required" } }
+      ]
+    },
+    {
+      "id": "complete-todo",
+      "name": "CompleteTodo",
+      "type": "command",
+      "chapter": "Todos",
+      "fields": ["todoId"],
+      "produces": ["TodoCompleted"],
+      "refined": true,
+      "scenarios": [
+        { "id": "complete-todo-1", "title": "Completes an open todo", "given": [{ "type": "TodoAdded" }], "when": "CompleteTodo", "then": { "events": [{ "type": "TodoCompleted" }] } },
+        { "id": "complete-todo-2", "title": "Refuses a todo that doesn't exist", "given": [], "when": "CompleteTodo", "then": { "rejected": "That todo doesn't exist" } },
+        { "id": "complete-todo-3", "title": "Refuses a todo that is already done", "given": [{ "type": "TodoAdded" }, { "type": "TodoCompleted" }], "when": "CompleteTodo", "then": { "rejected": "That todo is already done" } }
+      ]
+    },
+    {
+      "id": "remove-todo",
+      "name": "RemoveTodo",
+      "type": "command",
+      "chapter": "Todos",
+      "fields": ["todoId"],
+      "produces": ["TodoRemoved"],
+      "refined": true,
+      "scenarios": [
+        { "id": "remove-todo-1", "title": "Removes a todo", "given": [{ "type": "TodoAdded" }], "when": "RemoveTodo", "then": { "events": [{ "type": "TodoRemoved" }] } },
+        { "id": "remove-todo-2", "title": "Refuses a todo that doesn't exist", "given": [], "when": "RemoveTodo", "then": { "rejected": "That todo doesn't exist" } }
+      ]
+    },
+    {
+      "id": "todo-list",
+      "name": "TodoList",
+      "type": "view",
+      "chapter": "Todos",
+      "fields": ["todoId", "title", "done"],
+      "reads": ["TodoAdded", "TodoCompleted", "TodoRemoved"],
+      "refined": true,
+      "scenarios": [
+        { "id": "todo-list-1", "title": "Shows an added todo as open", "given": [{ "type": "TodoAdded" }], "when": "TodoList", "then": { "view": "TodoList", "value": "Buy milk, open" } },
+        { "id": "todo-list-2", "title": "Shows a completed todo as done", "given": [{ "type": "TodoAdded" }, { "type": "TodoCompleted" }], "when": "TodoList", "then": { "view": "TodoList", "value": "Buy milk, done" } },
+        { "id": "todo-list-3", "title": "Leaves out a removed todo", "given": [{ "type": "TodoAdded" }, { "type": "TodoAdded" }, { "type": "TodoRemoved" }], "when": "TodoList", "then": { "view": "TodoList", "value": "only Bake bread" } }
+      ]
+    }
+  ],
+  "comments": [
+    { "id": "c-1", "sliceId": "complete-todo", "author": "you", "text": "Can I undo a todo I ticked by mistake?", "at": "2026-11-01 10:02", "resolved": true },
+    { "id": "c-2", "sliceId": "complete-todo", "threadId": "c-1", "author": "ai", "text": "Not in this first version. Undo would be a new command, ReopenTodo, with its own event. I've left it out to keep the first build small; ask for it in a later round.", "at": "2026-11-01 10:05" },
+    { "id": "c-3", "sliceId": "add-todo", "scenarioId": "add-todo-2", "part": "then", "author": "you", "text": "Should a title of only spaces count as empty?", "at": "2026-11-01 10:03", "resolved": true },
+    { "id": "c-4", "sliceId": "add-todo", "scenarioId": "add-todo-2", "threadId": "c-3", "author": "ai", "text": "Yes: the title is trimmed first, so spaces alone are refused with \"Title is required\".", "at": "2026-11-01 10:06" }
+  ]
+}

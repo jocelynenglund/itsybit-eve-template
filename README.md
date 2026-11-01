@@ -2,32 +2,41 @@
 
 **E**vent modeling · **V**ertical slices · **E**vent sourcing
 
-Vibe coding works better when the AI has a plan it can't drift from. itsybit EVE is a small, browser-only tool that turns an app idea into that plan, then hands it to your AI coding assistant (Claude Code, Cursor, anything) as a starter pack.
+A starting point for building an app with your AI assistant. You and the AI agree on a plan first, in an **Event Book** you can comment on. Then the AI builds it slice by slice, tests first, and you open the finished app in your browser.
 
-## How it works
+**See it:** [the sample's Event Book](https://jocelynenglund.github.io/itsybit-eve-template/eve/book.html?root=../sample/todo/) · [the sample app](https://jocelynenglund.github.io/itsybit-eve-template/sample/todo/app/)
 
-1. **Idea.** Describe the app, then pick a stack (TypeScript, C# or Python) and an event store (a JSON Lines file or a SQLite table).
-2. **Events.** List what can happen, as facts in the past tense: `PlantListed`, `SwapRequested`.
-3. **Slices.** Add the command that causes each event and the views that show them. Each slice becomes its own folder.
-4. **Scenarios.** Write Given / When / Then for every slice: the happy case first, then each refusal. Each one becomes a test before any code is written.
-5. **Starter pack.** Copy the whole pack and paste it into your assistant in an empty folder.
+## How it goes
 
-## What's in the starter pack
+1. **Copy this repo** (Use this template, or `git clone`) and open your AI assistant in it: Claude Code, Cursor, Codex or anything that reads `AGENTS.md`.
+2. Say **"let's plan a todo app"** (or your idea). The AI writes `plan/model.json` and starts the Event Book at http://localhost:4747.
+3. **In the Event Book**, read each slice: what someone can do or see, with Given / When / Then examples. Comment on a slice, a scenario, or one line of it. Add scenarios you're missing. Tick **Refined** when a slice is right. Press **Done with feedback**.
+4. Tell the AI **"done"**. It reads your round (`plan/feedback/round-N.json`), answers every comment, updates the plan, and the book shows the next round. Repeat until every slice is refined.
+5. Say **"start building"**. The AI builds each slice like `sample/todo/`: tests from your scenarios first, then the code. The book turns each scenario green as its test passes.
+6. Open **http://localhost:4747/app/**. That's your app.
 
-| File | What it's for |
+You need [Node](https://nodejs.org) 18 or newer. There's nothing to install.
+
+## What's here
+
+| Path | What it is |
 |---|---|
-| `KICKOFF.md` | The prompt you paste: set up the project, then build one slice at a time, tests first. |
-| `CLAUDE.md` | The rules: pure `decide(history, command)` and `project(history)` functions, one folder per slice, events never changed. |
-| `docs/model.json` | The whole model: events, slices and scenarios. |
-| `docs/slices/*.md` | One spec per slice, with its scenarios. |
-| `docs/event-book.html` | **The Event Book.** Your plan, frozen. Open it in a browser to follow the build. |
-| `docs/progress.js` | The only file the assistant writes to report back: slice status, pass/fail per scenario, notes, and messages. A message marked `needs: true` shows as **Needs you**. |
+| `AGENTS.md` | How the AI works in this repo: the loop, the plan format, the code rules. `CLAUDE.md` loads it for Claude Code. |
+| `.claude/skills/` | `eve-plan`, `eve-refine`, `eve-build`: the step-by-step for each phase. Plain markdown, so other assistants can follow them too. |
+| `eve/book.html` | The Event Book. |
+| `eve/serve.mjs` | Serves the book and your app, and saves your feedback rounds. `node eve/serve.mjs` |
+| `eve/test.mjs` | Runs your app's tests, writes `plan/built.json`, and says how many planned scenarios pass. `node eve/test.mjs` |
+| `sample/todo/` | A small app planned and built this way: its plan, its feedback threads and its code. Try `node eve/serve.mjs sample/todo`. |
+| `plan/`, `app/` | Where your plan and your app go. |
 
-See [`example/plant-swap/`](example/plant-swap/) for a complete pack.
+## The shape of an EVE app
 
-## Run it
+- The only thing stored is a list of **events**: facts like `TodoAdded`. Everything on screen is worked out from them.
+- Each thing a person can do is a **command slice**: a folder with a pure `decide(history, command)` that returns new events or refuses with a reason, plus its tests.
+- Each thing a person can see is a **view slice**: a pure `project(history)`, plus its tests.
+- Every test is one of the Given / When / Then scenarios you agreed in the Event Book, with the same title. That's how the book knows what's built.
 
-It's one HTML file with no build step. Open `index.html` in a browser, or use the hosted copy on GitHub Pages. Your model stays in your browser (localStorage), stored as a log of events.
+The Event Book's files use the same names as the full Event Book app (`CommentAdded`, `ScenarioAdded`, `SliceMarkedRefined`, and Given/When/Then scenario exports), but you don't need anything beyond this repo.
 
 ## License
 

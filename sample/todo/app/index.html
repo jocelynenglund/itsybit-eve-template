@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Todo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Todo</h1>
+  <form id="add" autocomplete="off">
+    <label class="sr" for="title">New todo</label>
+    <input id="title" name="title" placeholder="What needs doing?">
+    <button type="submit">Add</button>
+  </form>
+  <p id="refusal" role="alert"></p>
+  <ul id="list"></ul>
+  <p id="empty">Nothing to do. Add something above.</p>
+</main>
+<button id="log-pill" class="log-pill" aria-expanded="false">Event log · <span id="log-count">0</span></button>
+<div id="log" class="log" hidden><ol id="log-list"></ol></div>
+<script type="module" src="main.js"></script>
+</body>
+</html>

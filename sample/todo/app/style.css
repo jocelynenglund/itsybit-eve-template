@@ -1,0 +1,22 @@
+:root { --paper: #f6f7f4; --ink: #1d2320; --muted: #66706b; --line: #d9ded9; --accent: #1d6a63; --warn: #b0501a; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root { --paper: #121614; --ink: #e6ebe8; --muted: #9aa69f; --line: #2c3531; --accent: #5fc2b4; --warn: #f08a50; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 system-ui, "Segoe UI", sans-serif; }
+main { max-width: 560px; margin: 0 auto; padding: 32px 16px 80px; display: grid; gap: 14px; }
+h1 { margin: 0; font-size: 28px; }
+form { display: flex; gap: 8px; }
+input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: inherit; font: inherit; }
+button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+form button { background: var(--accent); border-color: var(--accent); color: var(--paper); font-weight: 600; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#refusal { margin: 0; color: var(--warn); min-height: 1.5em; }
+ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+li { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+li span { flex: 1; overflow-wrap: anywhere; }
+li.done span { color: var(--muted); text-decoration: line-through; }
+#empty { color: var(--muted); margin: 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.log-pill { position: fixed; left: 12px; bottom: 12px; background: #16181a; color: #f1efe8; border: 0; border-radius: 999px; padding: 6px 12px; font: 500 12px ui-monospace, Menlo, Consolas, monospace; }
+.log { position: fixed; left: 12px; bottom: 50px; width: min(420px, calc(100% - 24px)); max-height: 50vh; overflow: auto; background: #16181a; color: #f1efe8; border-radius: 10px; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; }
+.log ol { margin: 0; padding: 8px 12px 8px 32px; }
+.log b { color: #f0a356; font-weight: 500; }
