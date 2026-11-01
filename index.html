@@ -42,6 +42,8 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px
 .word{font:700 19px var(--mono);color:#f1ebe2}
 .word em{font-style:normal;color:var(--accent)}
 .crumb{font:500 14px var(--mono);color:var(--faint);white-space:nowrap}
+.beta{font:600 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);border-radius:999px;padding:3px 7px;flex:none}
+.chip b{color:var(--accent);font-weight:600}
 .navlink{font-size:14px;color:#c9bfb2;text-decoration:none}
 .navlink:hover{color:var(--bright)}
 
@@ -114,13 +116,13 @@ footer em{font:400 italic 20px var(--display);color:var(--ink)}
 </head>
 <body>
 <nav><div class="wrap">
-  <a class="brand" href="./"><img src="eve/logo.svg" alt="" width="30" height="26"><span class="word">itsy<em>BIT</em></span><span class="crumb">/ EVE Template</span></a>
+  <a class="brand" href="./"><img src="eve/logo.svg" alt="" width="30" height="26"><span class="word">itsy<em>BIT</em></span><span class="crumb">/ EVE Template</span><span class="beta">beta</span></a>
   <a class="navlink" href="https://github.com/jocelynenglund/itsybit-eve-template">GitHub</a>
 </div></nav>
 
 <main class="wrap">
   <header class="hero">
-    <span class="chip">● an itsyBIT template</span>
+    <span class="chip">● an itsyBIT template · <b>beta</b></span>
     <h1>Vibe code<br>responsibly<span class="punch">with EVE.</span></h1>
     <p class="lede">Plan your app with your AI in an Event Book you can comment on. Then it builds it slice by slice, tests first. You watch every scenario turn green.</p>
     <div class="eve"><span><b class="c1">E</b>vent Modeling</span><span><b class="c3">V</b>ertical Slices</span><span><b class="c2">E</b>vent Sourcing</span></div>
