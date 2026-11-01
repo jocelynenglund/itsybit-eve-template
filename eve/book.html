@@ -77,7 +77,7 @@ main{padding:18px 0 120px}
 .gwt{display:grid;grid-template-columns:62px 1fr;gap:4px 10px;align-items:baseline}
 .gwt .k{font:600 11px/26px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .gwt .v{display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-height:26px}
-.refuse{color:var(--warn);font-weight:600}
+.refuse{font:600 13px/1.2 var(--mono);color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent);border-radius:5px;padding:3px 6px;white-space:nowrap}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:5px 11px;cursor:pointer;font-weight:500;white-space:nowrap;font-size:14px}
 .btn:hover{border-color:var(--muted)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
@@ -322,7 +322,7 @@ function renderScenario(sl, sc, V, isNew) {
   const given = (sc.given || []).length ? sc.given.map(g => `<span class="ev">${esc(g.type || g)}</span>`).join(" ") : `<span class="muted">nothing</span>`;
   const when = k === "view" ? `someone opens <code>${esc(sl.name)}</code>` : `<code>${esc(sc.when || sl.name)}</code>`;
   const t = sc.then || {};
-  const then = t.rejected != null ? `<span class="refuse">refused:</span> “${esc(t.rejected)}”`
+  const then = t.rejected != null ? `<span class="refuse">refused</span> “${esc(t.rejected)}”`
     : t.events ? t.events.map(e => `<span class="ev">${esc(e.type || e)}</span>`).join(" ")
     : t.view ? `shows ${esc(typeof t.value === "string" ? t.value : JSON.stringify(t.value))}`
     : `<span class="muted">nothing</span>`;
