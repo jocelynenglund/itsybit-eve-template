@@ -66,6 +66,11 @@ http.createServer((req, res) => {
   if (p === "/") { res.writeHead(302, { Location: "/eve/book.html" }); return res.end(); }
   if (p.startsWith("/eve/")) return serveFile(res, eveDir, p.slice(4));
   return serveFile(res, root, p);
+}).on("error", err => {
+  if (err.code !== "EADDRINUSE") throw err;
+  console.log(`Port ${port} is already in use. If that's this Event Book, it's already running: http://localhost:${port}`);
+  console.log(`To run another one, pick a port: PORT=4748 node eve/serve.mjs`);
+  process.exit(0);
 }).listen(port, "127.0.0.1", () => {
   console.log(`Event Book: http://localhost:${port}`);
   console.log(`The app:    http://localhost:${port}/app/`);
