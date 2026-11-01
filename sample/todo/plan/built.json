@@ -1,0 +1,305 @@
+{
+  "app": "Todo",
+  "createdAt": "2026-11-01T08:55:16.435Z",
+  "files": [
+    {
+      "file": "app/slices/add-todo/add-todo.test.mjs",
+      "scenarios": [
+        {
+          "chapter": "Todos",
+          "slice": "AddTodo",
+          "title": "Adds a todo",
+          "given": [],
+          "when": "AddTodo",
+          "whenData": {
+            "todoId": "t1",
+            "title": "Buy milk"
+          },
+          "then": {
+            "events": [
+              {
+                "type": "TodoAdded",
+                "data": {
+                  "todoId": "t1",
+                  "title": "Buy milk"
+                }
+              }
+            ]
+          },
+          "spec": {
+            "file": "app/slices/add-todo/add-todo.test.mjs"
+          },
+          "passing": true
+        },
+        {
+          "chapter": "Todos",
+          "slice": "AddTodo",
+          "title": "Refuses an empty title",
+          "given": [],
+          "when": "AddTodo",
+          "whenData": {
+            "todoId": "t1",
+            "title": "   "
+          },
+          "then": {
+            "rejected": "Title is required"
+          },
+          "spec": {
+            "file": "app/slices/add-todo/add-todo.test.mjs"
+          },
+          "passing": true
+        }
+      ]
+    },
+    {
+      "file": "app/slices/complete-todo/complete-todo.test.mjs",
+      "scenarios": [
+        {
+          "chapter": "Todos",
+          "slice": "CompleteTodo",
+          "title": "Completes an open todo",
+          "given": [
+            {
+              "type": "TodoAdded",
+              "data": {
+                "todoId": "t1",
+                "title": "Buy milk"
+              }
+            }
+          ],
+          "when": "CompleteTodo",
+          "whenData": {
+            "todoId": "t1"
+          },
+          "then": {
+            "events": [
+              {
+                "type": "TodoCompleted",
+                "data": {
+                  "todoId": "t1"
+                }
+              }
+            ]
+          },
+          "spec": {
+            "file": "app/slices/complete-todo/complete-todo.test.mjs"
+          },
+          "passing": true
+        },
+        {
+          "chapter": "Todos",
+          "slice": "CompleteTodo",
+          "title": "Refuses a todo that doesn't exist",
+          "given": [],
+          "when": "CompleteTodo",
+          "whenData": {
+            "todoId": "t1"
+          },
+          "then": {
+            "rejected": "That todo doesn't exist"
+          },
+          "spec": {
+            "file": "app/slices/complete-todo/complete-todo.test.mjs"
+          },
+          "passing": true
+        },
+        {
+          "chapter": "Todos",
+          "slice": "CompleteTodo",
+          "title": "Refuses a todo that is already done",
+          "given": [
+            {
+              "type": "TodoAdded",
+              "data": {
+                "todoId": "t1",
+                "title": "Buy milk"
+              }
+            },
+            {
+              "type": "TodoCompleted",
+              "data": {
+                "todoId": "t1"
+              }
+            }
+          ],
+          "when": "CompleteTodo",
+          "whenData": {
+            "todoId": "t1"
+          },
+          "then": {
+            "rejected": "That todo is already done"
+          },
+          "spec": {
+            "file": "app/slices/complete-todo/complete-todo.test.mjs"
+          },
+          "passing": true
+        }
+      ]
+    },
+    {
+      "file": "app/slices/remove-todo/remove-todo.test.mjs",
+      "scenarios": [
+        {
+          "chapter": "Todos",
+          "slice": "RemoveTodo",
+          "title": "Removes a todo",
+          "given": [
+            {
+              "type": "TodoAdded",
+              "data": {
+                "todoId": "t1",
+                "title": "Buy milk"
+              }
+            }
+          ],
+          "when": "RemoveTodo",
+          "whenData": {
+            "todoId": "t1"
+          },
+          "then": {
+            "events": [
+              {
+                "type": "TodoRemoved",
+                "data": {
+                  "todoId": "t1"
+                }
+              }
+            ]
+          },
+          "spec": {
+            "file": "app/slices/remove-todo/remove-todo.test.mjs"
+          },
+          "passing": true
+        },
+        {
+          "chapter": "Todos",
+          "slice": "RemoveTodo",
+          "title": "Refuses a todo that doesn't exist",
+          "given": [],
+          "when": "RemoveTodo",
+          "whenData": {
+            "todoId": "t1"
+          },
+          "then": {
+            "rejected": "That todo doesn't exist"
+          },
+          "spec": {
+            "file": "app/slices/remove-todo/remove-todo.test.mjs"
+          },
+          "passing": true
+        }
+      ]
+    },
+    {
+      "file": "app/slices/todo-list/todo-list.test.mjs",
+      "scenarios": [
+        {
+          "chapter": "Todos",
+          "slice": "TodoList",
+          "title": "Shows an added todo as open",
+          "given": [
+            {
+              "type": "TodoAdded",
+              "data": {
+                "todoId": "t1",
+                "title": "Buy milk"
+              }
+            }
+          ],
+          "when": "TodoList",
+          "then": {
+            "view": "TodoList",
+            "value": [
+              {
+                "todoId": "t1",
+                "title": "Buy milk",
+                "done": false
+              }
+            ]
+          },
+          "spec": {
+            "file": "app/slices/todo-list/todo-list.test.mjs"
+          },
+          "passing": true
+        },
+        {
+          "chapter": "Todos",
+          "slice": "TodoList",
+          "title": "Shows a completed todo as done",
+          "given": [
+            {
+              "type": "TodoAdded",
+              "data": {
+                "todoId": "t1",
+                "title": "Buy milk"
+              }
+            },
+            {
+              "type": "TodoCompleted",
+              "data": {
+                "todoId": "t1"
+              }
+            }
+          ],
+          "when": "TodoList",
+          "then": {
+            "view": "TodoList",
+            "value": [
+              {
+                "todoId": "t1",
+                "title": "Buy milk",
+                "done": true
+              }
+            ]
+          },
+          "spec": {
+            "file": "app/slices/todo-list/todo-list.test.mjs"
+          },
+          "passing": true
+        },
+        {
+          "chapter": "Todos",
+          "slice": "TodoList",
+          "title": "Leaves out a removed todo",
+          "given": [
+            {
+              "type": "TodoAdded",
+              "data": {
+                "todoId": "t1",
+                "title": "Buy milk"
+              }
+            },
+            {
+              "type": "TodoAdded",
+              "data": {
+                "todoId": "t2",
+                "title": "Bake bread"
+              }
+            },
+            {
+              "type": "TodoRemoved",
+              "data": {
+                "todoId": "t1"
+              }
+            }
+          ],
+          "when": "TodoList",
+          "then": {
+            "view": "TodoList",
+            "value": [
+              {
+                "todoId": "t2",
+                "title": "Bake bread",
+                "done": false
+              }
+            ]
+          },
+          "spec": {
+            "file": "app/slices/todo-list/todo-list.test.mjs"
+          },
+          "passing": true
+        }
+      ]
+    }
+  ]
+}

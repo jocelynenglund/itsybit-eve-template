@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Book</title>
+<style>
+:root{
+  /* Layout: one reading column of chapters and slices; a feedback bar pinned to the bottom. Sticky-note colours carry meaning. */
+  --paper:#eef1ee; --surface:#ffffff; --ink:#1b2220; --muted:#5a6662; --line:#d3dad6; --accent:#1d6a63;
+  --event:#e48a33; --command:#3f76db; --view:#37965f; --auto:#8a63c9; --warn:#b0501a; --pass:#2f8f57; --fail:#c2410c;
+  --body:system-ui,"Segoe UI",Roboto,sans-serif; --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --paper:#101513; --surface:#19201d; --ink:#e4ebe7; --muted:#99a6a0; --line:#2b3531; --accent:#5fc2b4;
+    --event:#f0a356; --command:#7fa4f2; --view:#5fc08a; --auto:#b497ea; --warn:#f08a50; --pass:#5fc08a; --fail:#f08a50; color-scheme:dark; }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--body)}
+h1,h2,h3{margin:0;text-wrap:balance} h1{font-size:21px} h2{font-size:17px} h3{font-size:15px}
+p{margin:0}
+code,.mono{font-family:var(--mono);font-size:.92em}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:900px;margin:0 auto;padding:0 16px}
+header.top{background:var(--surface);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding-top:14px;padding-bottom:14px}
+.brand{display:flex;gap:10px;align-items:center}
+.mark{width:22px;height:24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px}
+.mark i{border-radius:3px}.mark i:nth-child(1){background:var(--command)}.mark i:nth-child(2){background:var(--event)}.mark i:nth-child(3){background:var(--view)}
+.brand small{display:block;color:var(--muted);font-size:13px}
+.pills{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--surface);color:var(--muted);white-space:nowrap;text-decoration:none}
+.pill.ok{color:var(--pass);border-color:color-mix(in srgb,var(--pass) 50%,var(--line))}
+.pill.link{color:var(--accent);border-color:var(--accent);font-weight:600}
+main{padding:18px 0 120px}
+.stack{display:grid;gap:12px}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:6px}
+.note.go{border-color:var(--pass);border-left:5px solid var(--pass)}
+.note.new{border-left:5px solid var(--accent)}
+.chapter{display:grid;gap:10px;margin-top:10px}
+.chapter>h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.slice{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--command);border-radius:10px;padding:12px 14px;display:grid;gap:10px}
+.slice.view{border-left-color:var(--view)} .slice.automation{border-left-color:var(--auto)}
+.slice.is-refined{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pass) 35%,transparent)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spread{justify-content:space-between}
+.tag{font:600 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:4px 7px;border-radius:5px;white-space:nowrap}
+.tag.command{background:color-mix(in srgb,var(--command) 18%,transparent);color:color-mix(in srgb,var(--command) 75%,var(--ink))}
+.tag.view{background:color-mix(in srgb,var(--view) 18%,transparent);color:color-mix(in srgb,var(--view) 75%,var(--ink))}
+.tag.automation{background:color-mix(in srgb,var(--auto) 18%,transparent);color:color-mix(in srgb,var(--auto) 75%,var(--ink))}
+.tag.new{background:var(--accent);color:var(--surface)}
+.ev{font:500 13px/1.2 var(--mono);color:color-mix(in srgb,var(--event) 80%,var(--ink));background:color-mix(in srgb,var(--event) 14%,transparent);border-radius:5px;padding:3px 6px;white-space:nowrap}
+.muted{color:var(--muted);font-size:13px}
+.refined{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:7px;padding:3px 10px;cursor:pointer;font-weight:600;font-size:14px;user-select:none}
+.refined input{width:16px;height:16px;accent-color:var(--pass);margin:0}
+.refined.on{border-color:var(--pass);color:var(--pass)}
+.badge{font:600 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.05em;padding:4px 7px;border-radius:5px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.badge.pass{color:var(--pass);border-color:var(--pass)} .badge.fail{color:var(--fail);border-color:var(--fail)}
+.sc{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:6px}
+.sc-title{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.sc-title strong{font-size:14px;display:flex;gap:8px;align-items:center}
+.dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--line);flex:none}
+.dot.pass{background:var(--pass);border-color:var(--pass)} .dot.fail{background:var(--fail);border-color:var(--fail)}
+.gwt{display:grid;grid-template-columns:62px 1fr;gap:4px 10px;align-items:baseline}
+.gwt .k{font:600 11px/26px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.gwt .v{display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-height:26px}
+.refuse{color:var(--warn);font-weight:600}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:5px 11px;cursor:pointer;font-weight:500;white-space:nowrap;font-size:14px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.btn.quiet{border-color:transparent;background:transparent;color:var(--muted);padding:3px 8px;font-size:13px}
+.btn.quiet:hover{color:var(--ink);border-color:var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+.thread{border-left:3px solid var(--line);padding-left:10px;display:grid;gap:4px}
+.thread.resolved{opacity:.65}
+.cm{display:grid;gap:1px;font-size:14px}
+.cm .who{font-size:12px;color:var(--muted)}
+.cm .who b{color:var(--ink)}
+.cm.ai .who b{color:var(--accent)}
+.cm.draft .who::after{content:" · not sent yet";color:var(--accent)}
+.composer{display:grid;gap:6px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px}
+textarea,input[type=text],select{background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:7px 9px;width:100%}
+textarea{min-height:64px;resize:vertical}
+.chip{font:500 13px/1.2 var(--mono);border:1px dashed var(--line);background:transparent;border-radius:6px;padding:4px 7px;cursor:pointer;color:var(--muted)}
+.chip[aria-pressed="true"]{border-style:solid;border-color:color-mix(in srgb,var(--event) 60%,var(--line));background:color-mix(in srgb,var(--event) 16%,var(--surface));color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+label.f{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);z-index:5}
+.bar .wrap{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding-top:10px;padding-bottom:10px}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:24px;display:grid;gap:8px;max-width:60ch}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (max-width:520px){.gwt{grid-template-columns:52px 1fr}}
+</style>
+</head>
+<body>
+<div id="book"></div>
+<script>
+"use strict";
+/* The Event Book: read the plan, leave feedback, save it as a round for the AI. */
+const params = new URLSearchParams(location.search);
+const ROOT = params.get("root") || "../";
+const POLL_MS = 4000;
+
+let model = null, modelText = "", built = null, builtText = "", loadError = "";
+let draft = { events: [], sent: "" };
+const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false };
+
+/* ---------- loading ---------- */
+async function fetchText(path) {
+  const res = await fetch(ROOT + path + "?t=" + Date.now(), { cache: "no-store" });
+  if (!res.ok) throw new Error(res.status + " " + path);
+  return res.text();
+}
+async function loadAll(first) {
+  try {
+    const text = await fetchText("plan/model.json");
+    if (text !== modelText) {
+      const next = JSON.parse(text);
+      const roundChanged = model && next.round !== model.round;
+      if (first || !busy()) { model = next; modelText = text; loadDraft(); if (roundChanged) ui.message = "Round " + model.round + " is here. Your AI has answered."; }
+      else if (roundChanged) ui.newRound = true;
+    }
+    loadError = "";
+  } catch (e) { if (first) loadError = String(e.message || e); }
+  try {
+    const text = await fetchText("plan/built.json");
+    if (text !== builtText) { builtText = text; built = indexBuilt(JSON.parse(text)); }
+  } catch (e) { /* not built yet */ }
+  if (first || !busy()) render();
+}
+function busy() { return !!(ui.compose || ui.addFor); }
+function indexBuilt(b) {
+  const map = new Map();
+  for (const f of b.files || []) for (const s of f.scenarios || []) map.set(s.slice + "\u0000" + s.title, s);
+  return { at: b.createdAt, map };
+}
+
+/* ---------- the feedback draft (one per round, kept in this browser) ---------- */
+function draftKey() { return "eve-feedback:" + (model.app || "app") + ":" + model.round; }
+function loadDraft() {
+  try { draft = JSON.parse(localStorage.getItem(draftKey())) || { events: [], sent: "" }; } catch (e) { draft = { events: [], sent: "" }; }
+}
+function saveDraft() { try { localStorage.setItem(draftKey(), JSON.stringify(draft)); } catch (e) { /* in memory only */ } }
+function add(type, data) { draft.events.push({ type, data, at: stamp() }); saveDraft(); render(); }
+function stamp() { const d = new Date(), p = n => String(n).padStart(2, "0"); return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()); }
+function uid(prefix) { return prefix + "-" + Math.random().toString(36).slice(2, 8); }
+const locked = () => !!draft.sent;
+
+/* ---------- what the page shows: the plan plus this round's draft ---------- */
+function view() {
+  const comments = (model.comments || []).map(c => ({ ...c }));
+  const added = [];
+  const refined = {};
+  for (const sl of model.slices || []) refined[sl.id] = !!sl.refined;
+  for (const e of draft.events) {
+    const d = e.data;
+    if (e.type === "CommentAdded") comments.push({ id: d.commentId, sliceId: d.sliceId, scenarioId: d.scenarioId, part: d.part, threadId: d.threadId, author: "you", text: d.text, at: d.at, draft: true });
+    if (e.type === "CommentResolved") { const c = comments.find(x => x.id === d.commentId); if (c) { c.resolved = true; c.resolvedNow = true; } }
+    if (e.type === "ScenarioAdded") added.push(d);
+    if (e.type === "SliceMarkedRefined") refined[d.sliceId] = true;
+    if (e.type === "SliceRefinedCleared") refined[d.sliceId] = false;
+  }
+  return { comments, added, refined };
+}
+function counts() {
+  const c = { comments: 0, scenarios: 0, ticks: 0, resolved: 0 };
+  for (const e of draft.events) {
+    if (e.type === "CommentAdded") c.comments++;
+    else if (e.type === "ScenarioAdded") c.scenarios++;
+    else if (e.type === "CommentResolved") c.resolved++;
+    else c.ticks++;
+  }
+  return c;
+}
+
+/* ---------- rendering ---------- */
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+const kindOf = sl => sl.type === "view" ? "view" : sl.type === "automation" ? "automation" : "command";
+const kindLabel = { command: "Command", view: "View", automation: "Automation" };
+
+function render() {
+  const el = document.getElementById("book");
+  if (!model) { el.innerHTML = renderEmpty(); return; }
+  document.title = (model.app || "App") + " · Event Book";
+  const V = view();
+  const slices = model.slices || [];
+  const nRefined = slices.filter(s => V.refined[s.id]).length;
+  const allRefined = slices.length > 0 && nRefined === slices.length;
+  const b = builtSummary();
+  const chapters = (model.chapters || []).map(c => c.name);
+  for (const s of slices) if (s.chapter && !chapters.includes(s.chapter)) chapters.push(s.chapter);
+  const orphans = slices.filter(s => !s.chapter);
+  el.innerHTML =
+    `<header class="top"><div class="wrap">
+      <div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div><h1>${esc(model.app || "Your app")} · Event Book</h1><small>Round ${esc(model.round || 1)}${model.idea ? " · " + esc(model.idea) : ""}</small></div></div>
+      <div class="pills">
+        <span class="pill ${allRefined ? "ok" : ""}">${nRefined} of ${slices.length} slices refined</span>
+        ${b.total ? `<span class="pill ${b.passing === b.total ? "ok" : ""}">${b.passing} of ${b.total} scenarios pass</span>` : ""}
+        ${b.any ? `<a class="pill link" href="${esc(ROOT)}app/">Open the app</a>` : ""}
+      </div></div></header>
+    <main><div class="wrap stack">
+      ${ui.newRound ? `<div class="note new"><strong>A new round is ready.</strong><div class="row"><button class="btn primary" data-act="reload">Show the new round</button><span class="muted">Finish what you're typing first; it's saved.</span></div></div>` : ""}
+      ${ui.message ? `<div class="note new" role="status">${esc(ui.message)}</div>` : ""}
+      ${intro(allRefined, b)}
+      ${renderThreads(V, t => !t.sliceId, "General comments")}
+      ${!locked() ? composerOrButton({ kind: "board" }, "Add a general comment") : ""}
+      ${chapters.map(ch => `<section class="chapter"><h2>${esc(ch)}</h2>${slices.filter(s => s.chapter === ch).map(s => renderSlice(s, V)).join("")}</section>`).join("")}
+      ${orphans.length ? `<section class="chapter"><h2>Other</h2>${orphans.map(s => renderSlice(s, V)).join("")}</section>` : ""}
+    </div></main>
+    ${renderBar()}`;
+}
+
+function intro(allRefined, b) {
+  if (b.total && b.passing === b.total && allRefined) return `<div class="note go"><strong>Built.</strong><p>Every planned scenario passes. <a href="${esc(ROOT)}app/">Open the app</a>.</p></div>`;
+  if (b.any) return `<div class="note"><strong>Building.</strong><p>Green dots are scenarios with a passing test. This page updates by itself as your AI works.</p></div>`;
+  if (allRefined && !draft.events.length) return `<div class="note go"><strong>Every slice is refined.</strong><p>Tell your AI: <b>start building</b>.</p></div>`;
+  return `<div class="note"><p>Read each slice. Comment on anything that looks wrong, add the scenarios you're missing, and tick <b>Refined</b> when a slice is right. Then press <b>Done with feedback</b> and tell your AI <b>done</b>.</p></div>`;
+}
+
+function builtSummary() {
+  let total = 0, passing = 0;
+  for (const sl of model.slices || []) for (const sc of sl.scenarios || []) {
+    total++;
+    const r = built && built.map.get(sl.name + "\u0000" + sc.title);
+    if (r && r.passing) passing++;
+  }
+  const any = !!(built && built.map.size);
+  return { total: any ? total : 0, passing, any };
+}
+
+function renderSlice(sl, V) {
+  const k = kindOf(sl), on = V.refined[sl.id];
+  const scen = sl.scenarios || [];
+  let badge = "";
+  if (built && built.map.size) {
+    const res = scen.map(sc => built.map.get(sl.name + "\u0000" + sc.title));
+    const pass = res.filter(r => r && r.passing).length, fail = res.filter(r => r && !r.passing).length;
+    badge = pass === scen.length && scen.length ? `<span class="badge pass">Built</span>` : fail ? `<span class="badge fail">${pass}/${scen.length} pass</span>` : pass ? `<span class="badge">${pass}/${scen.length} pass</span>` : `<span class="badge">Not built</span>`;
+  }
+  const flow = k === "view"
+    ? `<span class="muted">from</span> ${(sl.reads || []).map(e => `<span class="ev">${esc(e)}</span>`).join(" ")}`
+    : `<span class="muted">→</span> ${(sl.produces || []).map(e => `<span class="ev">${esc(e)}</span>`).join(" ")}`;
+  return `<article class="slice ${k} ${on ? "is-refined" : ""}" id="slice-${esc(sl.id)}">
+    <div class="row spread">
+      <div class="row"><span class="tag ${k}">${kindLabel[k]}</span><h3 class="mono">${esc(sl.name)}</h3>${flow}</div>
+      <div class="row">${badge}
+        <label class="refined ${on ? "on" : ""}"><input type="checkbox" data-act="refine" data-slice="${esc(sl.id)}" ${on ? "checked" : ""} ${locked() ? "disabled" : ""}>Refined</label></div>
+    </div>
+    ${sl.fields && sl.fields.length ? `<p class="muted">${k === "view" ? "Shows" : "Needs"}: ${sl.fields.map(esc).join(", ")}</p>` : ""}
+    ${sl.description ? `<p>${esc(sl.description)}</p>` : ""}
+    ${renderThreads(V, t => t.sliceId === sl.id && !t.scenarioId)}
+    ${!locked() ? composerOrButton({ kind: "slice", sliceId: sl.id }, "Comment on this slice") : ""}
+    ${scen.map(sc => renderScenario(sl, sc, V)).join("")}
+    ${V.added.filter(a => a.sliceId === sl.id).map(a => renderScenario(sl, { id: a.scenarioId, title: a.name, given: a.given, when: a.when, then: a.then }, V, true)).join("")}
+    ${!locked() ? (ui.addFor === sl.id ? renderAddForm(sl) : `<div><button class="btn quiet" data-act="add-open" data-slice="${esc(sl.id)}">+ Add a scenario</button></div>`) : ""}
+  </article>`;
+}
+
+function renderScenario(sl, sc, V, isNew) {
+  const k = kindOf(sl);
+  const r = built && built.map.get(sl.name + "\u0000" + sc.title);
+  const dot = r ? (r.passing ? "pass" : "fail") : "";
+  const given = (sc.given || []).length ? sc.given.map(g => `<span class="ev">${esc(g.type || g)}</span>`).join(" ") : `<span class="muted">nothing</span>`;
+  const when = k === "view" ? `someone opens <code>${esc(sl.name)}</code>` : `<code>${esc(sc.when || sl.name)}</code>`;
+  const t = sc.then || {};
+  const then = t.rejected != null ? `<span class="refuse">refused:</span> “${esc(t.rejected)}”`
+    : t.events ? t.events.map(e => `<span class="ev">${esc(e.type || e)}</span>`).join(" ")
+    : t.view ? `shows ${esc(typeof t.value === "string" ? t.value : JSON.stringify(t.value))}`
+    : `<span class="muted">nothing</span>`;
+  return `<div class="sc">
+    <div class="sc-title"><strong><span class="dot ${dot}" title="${r ? (r.passing ? "test passes" : "test fails") : "no test yet"}"></span>${esc(sc.title)} ${isNew ? `<span class="tag new">New</span>` : ""}</strong>
+      ${isNew ? (!locked() ? `<button class="btn quiet" data-act="drop-scenario" data-id="${esc(sc.id)}">Remove</button>` : "") : (!locked() ? `<button class="btn quiet" data-act="compose" data-kind="scenario" data-slice="${esc(sl.id)}" data-scenario="${esc(sc.id)}">Comment</button>` : "")}</div>
+    <div class="gwt"><span class="k">Given</span><div class="v">${given}</div>
+      <span class="k">When</span><div class="v">${when}</div>
+      <span class="k">Then</span><div class="v">${then}</div></div>
+    ${r && !r.passing && r.error ? `<p class="muted">Test says: ${esc(r.error)}</p>` : ""}
+    ${isNew ? "" : renderThreads(V, c => c.scenarioId === sc.id)}
+    ${!isNew && ui.compose && ui.compose.kind === "scenario" && ui.compose.scenarioId === sc.id && !ui.compose.threadId ? renderComposer() : ""}
+  </div>`;
+}
+
+function renderThreads(V, match, heading) {
+  const roots = V.comments.filter(c => !c.threadId && match(c));
+  if (!roots.length) return "";
+  return (heading ? `<h3>${esc(heading)}</h3>` : "") + roots.map(root => {
+    const replies = V.comments.filter(c => c.threadId === root.id);
+    const replying = ui.compose && ui.compose.threadId === root.id;
+    return `<div class="thread ${root.resolved ? "resolved" : ""}">
+      ${[root, ...replies].map(renderComment).join("")}
+      ${locked() ? "" : replying ? renderComposer() : `<div class="row">
+        <button class="btn quiet" data-act="reply" data-thread="${esc(root.id)}" data-slice="${esc(root.sliceId || "")}" data-scenario="${esc(root.scenarioId || "")}" data-part="${esc(root.part || "")}">Reply</button>
+        ${root.resolved ? `<span class="muted">Resolved${root.resolvedNow ? " (not sent yet)" : ""}</span>` : `<button class="btn quiet" data-act="resolve" data-id="${esc(root.id)}">Resolve</button>`}</div>`}
+    </div>`;
+  }).join("");
+}
+
+function renderComment(c) {
+  const part = c.part ? ` · on ${esc(c.part[0].toUpperCase() + c.part.slice(1))}` : "";
+  return `<div class="cm ${c.author === "ai" ? "ai" : ""} ${c.draft ? "draft" : ""}">
+    <span class="who"><b>${c.author === "ai" ? "AI" : "You"}</b>${c.at ? " · " + esc(c.at) : ""}${part}</span>
+    <span>${esc(c.text)} ${c.draft && !locked() ? `<button class="btn quiet" data-act="drop-comment" data-id="${esc(c.id)}">Remove</button>` : ""}</span></div>`;
+}
+
+function composerOrButton(target, label) {
+  const open = ui.compose && ui.compose.kind === target.kind && !ui.compose.threadId &&
+    (target.kind === "board" || (ui.compose.sliceId === target.sliceId && !ui.compose.scenarioId));
+  if (open) return renderComposer();
+  return `<div><button class="btn quiet" data-act="compose" data-kind="${target.kind}" data-slice="${esc(target.sliceId || "")}">${esc(label)}</button></div>`;
+}
+
+function renderComposer() {
+  const c = ui.compose;
+  const partSelect = c.kind === "scenario" && !c.threadId
+    ? `<label class="f" for="cm-part">About<select id="cm-part"><option value="">the whole scenario</option><option value="given">Given</option><option value="when">When</option><option value="then">Then</option></select></label>` : "";
+  return `<form class="composer" data-form="comment">
+    ${partSelect}
+    <label class="sr" for="cm-text">Comment</label>
+    <textarea id="cm-text" placeholder="${c.threadId ? "Reply…" : "What's wrong, missing or unclear?"}" required></textarea>
+    <div class="row"><button class="btn primary" type="submit">${c.threadId ? "Reply" : "Add comment"}</button><button class="btn quiet" type="button" data-act="cancel">Cancel</button></div>
+  </form>`;
+}
+
+function renderAddForm(sl) {
+  const k = kindOf(sl), f = ui.form;
+  const events = (model.events || []).map(e => e.name);
+  const thenPart = k === "view"
+    ? `<label class="f" for="add-shows">Then it shows<input type="text" id="add-shows" placeholder="e.g. only the open todos" value="${esc(f.shows)}"></label>`
+    : `<div class="f">Then<div class="row">
+        <label><input type="radio" name="add-outcome" value="event" ${f.outcome === "event" ? "checked" : ""}> it produces</label>
+        <select id="add-event" aria-label="Event produced">${(sl.produces || events).map(e => `<option ${f.event === e ? "selected" : ""}>${esc(e)}</option>`).join("")}</select></div>
+        <div class="row"><label><input type="radio" name="add-outcome" value="rejected" ${f.outcome === "rejected" ? "checked" : ""}> it's refused, because</label>
+        <input type="text" id="add-reason" style="flex:1;min-width:180px" placeholder="the reason the person sees" value="${esc(f.reason)}"></div></div>`;
+  return `<form class="composer" data-form="scenario">
+    <strong>New scenario for ${esc(sl.name)}</strong>
+    <label class="f" for="add-title">Title<input type="text" id="add-title" placeholder="e.g. Refuses a todo that is already done" value="${esc(f.title)}" required></label>
+    <div class="f">Given (tap what has already happened, in order)<div class="chips">${events.map(e => `<button type="button" class="chip" data-act="add-given" data-event="${esc(e)}" aria-pressed="false">${esc(e)}</button>`).join("")}</div>
+      <p class="muted" id="add-given-list">${f.given.length ? "Given: " + f.given.map(esc).join(", ") + ` <button type="button" class="btn quiet" data-act="add-given-clear">Clear</button>` : "Given: nothing yet"}</p></div>
+    <p class="muted">When: ${k === "view" ? "someone opens " : ""}<code>${esc(sl.name)}</code></p>
+    ${thenPart}
+    <div class="row"><button class="btn primary" type="submit">Add scenario</button><button class="btn quiet" type="button" data-act="cancel">Cancel</button></div>
+  </form>`;
+}
+
+function renderBar() {
+  const c = counts();
+  if (locked()) return `<div class="bar"><div class="wrap"><span>Saved <code>${esc(draft.sent)}</code>. Tell your AI: <b>done with feedback</b>. This page shows the next round when it's ready.</span></div></div>`;
+  const parts = [];
+  if (c.comments) parts.push(c.comments + " comment" + (c.comments > 1 ? "s" : ""));
+  if (c.scenarios) parts.push(c.scenarios + " new scenario" + (c.scenarios > 1 ? "s" : ""));
+  if (c.ticks) parts.push(c.ticks + " Refined change" + (c.ticks > 1 ? "s" : ""));
+  if (c.resolved) parts.push(c.resolved + " resolved");
+  return `<div class="bar"><div class="wrap">
+    <span class="muted">${parts.length ? "Your feedback this round: " + parts.join(" · ") : "No feedback yet this round."}</span>
+    <button class="btn primary" data-act="done" ${parts.length && !ui.saving ? "" : "disabled"}>${ui.saving ? "Saving…" : "Done with feedback"}</button>
+  </div></div>`;
+}
+
+function renderEmpty() {
+  return `<main><div class="wrap"><div class="empty">
+    <h1>No plan yet</h1>
+    ${loadError ? `<p class="muted">Couldn't read <code>${esc(ROOT)}plan/model.json</code> (${esc(loadError)}).</p>` : ""}
+    <p>Ask your AI: <b>let's plan a todo app</b> (or whatever you want to build). It writes the plan and this page shows it.</p>
+    <p class="muted">Opened this file straight from disk? Start the book with <code>node eve/serve.mjs</code> and open <code>http://localhost:4747</code>.</p>
+  </div></div></main>`;
+}
+
+/* ---------- actions ---------- */
+async function finish() {
+  const payload = { app: model.app, round: model.round, createdAt: new Date().toISOString(), events: draft.events };
+  ui.saving = true; render();
+  let saved = "";
+  try {
+    const res = await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    if (res.ok) saved = (await res.json()).saved;
+  } catch (e) { /* no server: fall back to a download */ }
+  if (!saved) {
+    const name = "round-" + model.round + ".json";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+    a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    saved = "plan/feedback/" + name + " (downloaded: move it into plan/feedback/)";
+  }
+  draft.sent = saved; ui.saving = false; saveDraft(); render();
+}
+
+document.addEventListener("click", ev => {
+  const el = ev.target.closest("[data-act]");
+  if (!el) return;
+  const act = el.dataset.act;
+  if (act === "refine") return;
+  ev.preventDefault();
+  switch (act) {
+    case "compose": ui.compose = { kind: el.dataset.kind, sliceId: el.dataset.slice || undefined, scenarioId: el.dataset.scenario || undefined }; ui.addFor = null; render(); focus("cm-text"); break;
+    case "reply": ui.compose = { kind: "reply", threadId: el.dataset.thread, sliceId: el.dataset.slice || undefined, scenarioId: el.dataset.scenario || undefined, part: el.dataset.part || undefined }; ui.addFor = null; render(); focus("cm-text"); break;
+    case "cancel": ui.compose = null; ui.addFor = null; render(); break;
+    case "resolve": add("CommentResolved", { commentId: el.dataset.id }); break;
+    case "drop-comment": draft.events = draft.events.filter(e => !(e.type === "CommentAdded" && e.data.commentId === el.dataset.id)); saveDraft(); render(); break;
+    case "drop-scenario": draft.events = draft.events.filter(e => !(e.type === "ScenarioAdded" && e.data.scenarioId === el.dataset.id)); saveDraft(); render(); break;
+    case "add-open": ui.addFor = el.dataset.slice; ui.compose = null; ui.form = { title: "", given: [], outcome: "event", event: "", reason: "", shows: "" }; render(); focus("add-title"); break;
+    case "add-given": readForm(); ui.form.given.push(el.dataset.event); render(); break;
+    case "add-given-clear": readForm(); ui.form.given = []; render(); break;
+    case "done": finish(); break;
+    case "reload": ui.newRound = false; ui.compose = null; ui.addFor = null; modelText = ""; loadAll(true); break;
+  }
+});
+
+document.addEventListener("change", ev => {
+  const el = ev.target;
+  if (el.dataset.act !== "refine") return;
+  const id = el.dataset.slice;
+  const mine = draft.events.findIndex(e => (e.type === "SliceMarkedRefined" || e.type === "SliceRefinedCleared") && e.data.sliceId === id);
+  if (mine >= 0) { draft.events.splice(mine, 1); saveDraft(); render(); }
+  else add(el.checked ? "SliceMarkedRefined" : "SliceRefinedCleared", { sliceId: id });
+});
+
+document.addEventListener("submit", ev => {
+  ev.preventDefault();
+  const form = ev.target.dataset.form;
+  if (form === "comment") {
+    const text = document.getElementById("cm-text").value.trim();
+    if (!text) return;
+    const c = ui.compose, partEl = document.getElementById("cm-part");
+    const data = { commentId: uid("c"), text, nickname: "you", at: stamp() };
+    if (c.sliceId) data.sliceId = c.sliceId;
+    if (c.scenarioId) data.scenarioId = c.scenarioId;
+    if (partEl && partEl.value) data.part = partEl.value;
+    if (c.part) data.part = c.part;
+    if (c.threadId) data.threadId = c.threadId;
+    ui.compose = null;
+    add("CommentAdded", data);
+  } else if (form === "scenario") {
+    readForm();
+    const f = ui.form, sl = model.slices.find(s => s.id === ui.addFor), k = kindOf(sl);
+    if (!f.title.trim()) return focus("add-title");
+    const then = k === "view" ? { view: sl.name, value: f.shows.trim() }
+      : f.outcome === "rejected" ? { rejected: f.reason.trim() } : { events: [{ type: f.event || (sl.produces || [])[0] }] };
+    ui.addFor = null;
+    add("ScenarioAdded", { scenarioId: uid("s"), sliceId: sl.id, name: f.title.trim(), given: f.given.map(t => ({ type: t })), when: sl.name, then });
+  }
+});
+
+function readForm() {
+  const f = ui.form; if (!f) return;
+  const v = id => { const el = document.getElementById(id); return el ? el.value : ""; };
+  f.title = v("add-title"); f.reason = v("add-reason"); f.shows = v("add-shows"); f.event = v("add-event");
+  const r = document.querySelector('input[name="add-outcome"]:checked'); if (r) f.outcome = r.value;
+}
+function focus(id) { const el = document.getElementById(id); if (el) el.focus(); }
+
+loadAll(true);
+setInterval(() => loadAll(false), POLL_MS);
+</script>
+</body>
+</html>
