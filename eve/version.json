@@ -1,7 +1,13 @@
 {
-  "version": "2026-11-01.12",
+  "version": "2026-11-01.13",
   "note": "For maintainers: on every release, bump version (YYYY-MM-DD, then .2, .3 … for more releases that day) and add an entry at the top of releases, in words the person using EVE understands.",
   "releases": [
+    {
+      "version": "2026-11-01.13",
+      "notes": [
+        "The Event Book's header folds to one slim row while you scroll."
+      ]
+    },
     {
       "version": "2026-11-01.12",
       "notes": [

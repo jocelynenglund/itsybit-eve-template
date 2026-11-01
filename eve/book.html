@@ -38,6 +38,15 @@ header.top .wrap{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;ju
 .mark svg{width:44px;height:38px;display:block}
 .brand small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;color:var(--muted);font-size:13px}
 .pills{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;font-variant-numeric:tabular-nums}
+/* Scrolled down: the header folds to one slim row (logo, title, counts); back at the top it opens again. */
+body.scrolled header.top .wrap{flex-wrap:nowrap;padding-top:7px;padding-bottom:7px;gap:12px}
+body.scrolled .brand{align-items:center;min-width:0;gap:8px}
+body.scrolled .brand .mark{margin-top:0}
+body.scrolled .mark svg{width:26px;height:22px}
+body.scrolled h1{font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.scrolled .brand small{display:none}
+body.scrolled .pills{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;font-size:12px}
+@media (max-width:640px){ body.scrolled .pills .pill:not(.ok):not(.link){display:none} }
 .pill{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--surface);color:var(--muted);white-space:nowrap;text-decoration:none}
 .pill.ok{color:var(--pass);border-color:color-mix(in srgb,var(--pass) 50%,var(--line))}
 .pill.link{color:var(--accent);border-color:var(--accent);font-weight:600}
@@ -576,6 +585,12 @@ function readForm() {
 function focus(id) { const el = document.getElementById(id); if (el) el.focus(); }
 
 loadAll(true);
+// Fold the header after scrolling a little; open it again near the top. The gap between the two stops it flickering.
+addEventListener("scroll", () => {
+  const y = scrollY, on = document.body.classList.contains("scrolled");
+  if (!on && y > 80) document.body.classList.add("scrolled");
+  else if (on && y < 16) document.body.classList.remove("scrolled");
+}, { passive: true });
 checkEveVersion();
 
 // Say when a newer EVE is out. Only when running on someone's own machine; quiet when offline.
