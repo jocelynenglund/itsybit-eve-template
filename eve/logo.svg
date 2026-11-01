@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 120" width="140" height="120" role="img" aria-label="itsyBIT EVE">
+  <!-- itsyBIT EVE: the itsybit mark with a kebab of Event Modeling colours (command, event, view). -->
+  <rect x="5" y="5" width="90" height="110" rx="16" fill="#9B2335"/>
+  <circle cx="50" cy="42" r="22" fill="none" stroke="#fff" stroke-width="8"/>
+  <line x1="30" y1="92" x2="70" y2="92" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="121" cy="27" r="11" fill="#3f76db"/>
+  <circle cx="121" cy="60" r="11" fill="#e0873a"/>
+  <circle cx="121" cy="93" r="11" fill="#37965f"/>
+</svg>
