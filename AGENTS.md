@@ -46,6 +46,7 @@ Follow `sample/todo/plan/model.json` exactly. In short:
 - `app`, `idea`, `round` (starts at 1, goes up by one each time you answer feedback), `chapters` [{name}], `events` [{name, fields}].
 - `slices`: each has `id` (kebab-case), `name` (PascalCase), `type` (`command` | `view` | `automation`), `chapter`, `fields`, `produces` (commands) or `reads` (views), `refined`, and `scenarios`.
 - A scenario: `{ id, title, given: [{type}], when: <slice name>, then }`. `then` is `{ events: [{type}] }`, `{ rejected: "reason" }` or `{ view: <name>, value: "what it shows, in words" }`.
+- `look` (optional): what the app should feel like, filled in on the Event Book's Look and feel card: `{ moods: [], colours: ["#hex"], theme ("light"|"dark"|"both"|""), type, likes, device ("phone"|"laptop"|"both"|""), where, notes }`. You copy it from the feedback round; eve-design and `node eve/brief.mjs` use it.
 - `comments`: `{ id, sliceId?, scenarioId?, part? ("given"|"when"|"then"), threadId? (the comment it answers), author ("you"|"ai"), text, at, resolved? }`. No `sliceId` means a general comment.
 
 ## Rules for the plan

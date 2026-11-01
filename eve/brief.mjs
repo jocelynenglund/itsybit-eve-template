@@ -32,9 +32,25 @@ out.push(
   "- Mobile first, and it must also work on a laptop. Readable contrast, visible focus, big enough tap targets.",
   "- Show the messages where they happen (next to the action that was refused), in the person's own words as written here.",
   "- Use the example content below so the screens look real.",
+  "- **Start with three directions:** three clearly different looks, each a style guide plus one key screen with the example content. The person picks one (or mixes), then you finish every screen in that direction.",
   "- **Deliver:** a style guide (colours, fonts, spacing, the look of buttons, inputs, lists and messages) and the screens, as plain HTML and CSS if your tool can export it, otherwise as images.",
   ""
 );
+
+// What the person said about the look, from the Event Book's Look and feel card.
+const L = model.look;
+if (L) {
+  const sel = (v, map) => (map[v] || v || "");
+  const lines = [];
+  if (L.moods && L.moods.length) lines.push(`- **Feel:** ${L.moods.join(", ")}`);
+  if (L.colours && L.colours.length) lines.push(`- **Colours they like:** ${L.colours.join(", ")}`);
+  if (L.theme) lines.push(`- **Light or dark:** ${sel(L.theme, { both: "both, following the device" })}`);
+  if (L.type) lines.push(`- **Lettering:** ${L.type}`);
+  if (L.likes) lines.push(`- **Looks they like:** ${L.likes}`);
+  if (L.device || L.where) lines.push(`- **Where it's used:** ${[sel(L.device, { phone: "mostly on a phone", laptop: "mostly on a laptop", both: "phone and laptop" }), L.where].filter(Boolean).join(", ")}`);
+  if (L.notes) lines.push(`- **Also:** ${L.notes}`);
+  if (lines.length) out.push("## Look and feel", "", "In the person's own words. Every direction should fit this; vary everything else.", "", ...lines, "");
+}
 
 for (const ch of chapters) {
   const list = slices.filter(s => (s.chapter || "Other") === ch);
