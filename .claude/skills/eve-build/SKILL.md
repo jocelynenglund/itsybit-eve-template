@@ -6,7 +6,7 @@ description: Build an EVE app from its refined plan, slice by slice and test-fir
 # Build the app
 
 0. **Only refined plans.** If any slice in `plan/model.json` has `refined: false`, list those slices by name, say they need a tick in the book first, and stop.
-1. **Set up `app/`** (only if it doesn't exist yet): copy `sample/todo/app/lib/` (store.js, gwt.mjs), `package.json`, `index.html`, `main.js` and `style.css` from `sample/todo/app/`. Change the title, the store key (`createStore("<app-id>")`) and the page content to this app. Delete the sample's slices from `main.js`.
+1. **Set up `app/`** (only if it doesn't exist yet): copy `sample/todo/app/lib/` (store.js, gwt.mjs), `package.json`, `index.html`, `main.js` and `style.css` from `sample/todo/app/`. Change the title, the store key (`createStore("<app-id>")`) and the page content to this app. Delete the sample's slices from `main.js`. If `design/` has a design (from eve-design), use its colours, fonts and layout in `style.css` and `index.html` instead of the sample's.
 2. **Only what isn't built.** Run `node eve/test.mjs` first. Leave slices whose scenarios all pass alone (only touch them to keep them green). Build the rest, plus the new scenarios of slices that changed.
 3. **Order:** commands in the order of the events they produce (the order of `events` in the plan), then views, then automations.
 4. **For each slice:**
