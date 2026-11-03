@@ -44,6 +44,10 @@ header.top .wrap{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;ju
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:600}
 /* Board: the traditional Event Modeling timeline. Columns are slices in plan order; commands and views on top, events below. */
 main.board-main{padding:14px 0 110px}
+.export{max-width:900px;margin:0 auto 12px;padding:0 16px}
+.export .note{border-left:5px solid var(--command)}
+.export ul{margin:2px 0;padding-left:20px;display:grid;gap:2px;max-width:72ch}
+.export q{font-style:italic}
 .board-hint{max-width:900px;margin:0 auto 10px;padding:0 16px;color:var(--muted);font-size:13px}
 .board{position:relative;overflow-x:auto;padding:4px 16px 24px}
 .board svg.arrows{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
@@ -161,7 +165,7 @@ const POLL_MS = 4000;
 
 let model = null, modelText = "", built = null, builtText = "", loadError = "";
 let draft = { events: [], sent: "" };
-const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false, openDone: new Set(), lookForm: null, mode: (() => { try { return localStorage.getItem("eve-mode") === "board" ? "board" : "book"; } catch (e) { return "book"; } })() };
+const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false, openDone: new Set(), lookForm: null, exportOpen: false, mode: (() => { try { return localStorage.getItem("eve-mode") === "board" ? "board" : "book"; } catch (e) { return "book"; } })() };
 
 /* ---------- loading ---------- */
 async function fetchText(path) {
@@ -261,6 +265,7 @@ function render() {
       <div class="brand"><div class="mark" aria-hidden="true" title="itsyBIT EVE"><svg viewBox="0 0 140 120"><rect x="5" y="5" width="90" height="110" rx="16" fill="#9B2335"/><circle cx="50" cy="42" r="22" fill="none" stroke="#fff" stroke-width="8"/><line x1="30" y1="92" x2="70" y2="92" stroke="#fff" stroke-width="8" stroke-linecap="round"/><circle cx="121" cy="27" r="11" style="fill:var(--command)"/><circle cx="121" cy="60" r="11" style="fill:var(--event)"/><circle cx="121" cy="93" r="11" style="fill:var(--view)"/></svg></div>
         <div><h1>${esc(model.app || "Your app")} · Event Book</h1><small title="${esc(model.idea || "")}">Round ${esc(model.round || 1)}${model.idea ? " · " + esc(model.idea) : ""}</small></div></div>
       <div class="pills">
+        <button class="pill" data-act="export-open" aria-expanded="${ui.exportOpen}">Export</button>
         <span class="seg" role="group" aria-label="View"><button data-act="mode" data-mode="book" aria-pressed="${ui.mode === "book"}">Book</button><button data-act="mode" data-mode="board" aria-pressed="${ui.mode === "board"}">Board</button></span>
         ${done.size && open.length
           ? `<span class="pill ${allRefined ? "ok" : ""}">${nOpenRefined} of ${open.length} new ${open.length === 1 ? "slice" : "slices"} refined</span><span class="pill ok">${done.size} built</span>`
@@ -268,6 +273,7 @@ function render() {
         ${b.total ? `<span class="pill ${b.passing === b.total ? "ok" : ""}">${b.passing} of ${b.total} scenarios pass</span>` : ""}
         ${b.any ? `<a class="pill link" href="${esc(ROOT)}app/">Open the app</a>` : ""}
       </div></div></header>
+    ${ui.exportOpen ? renderExport() : ""}
     ${ui.mode === "board" ? `<main class="board-main">
       ${ui.newRound ? `<div class="board-hint"><button class="btn primary" data-act="reload">Show the new round</button></div>` : ""}
       <p class="board-hint">The plan as an event model: time runs left to right. Commands and views on top, the events they cause and read below. Tap a sticky to open it in the book.</p>
@@ -285,6 +291,28 @@ function render() {
     </div></main>`}
     ${renderBar()}`;
   if (ui.mode === "board") requestAnimationFrame(drawArrows);
+}
+
+/* ---------- export: take the plan to eventmodelers.ai ---------- */
+function renderExport() {
+  return `<div class="export" style="padding-top:14px"><div class="note" role="region" aria-label="Export">
+    <p><strong>Working with a team, or want AI agents to build from the model?</strong> Take your plan to <a href="https://eventmodelers.ai" target="_blank" rel="noopener">eventmodelers.ai</a>, EM-Studio by Nebulit: <q>your digital place for business, engineering, and AI to collaborate</q>.</p>
+    <ul>
+      <li>One shared board for your team, in real time, AI agents included.</li>
+      <li>Slices turned into code by your own coding agents, which run the tests and commit.</li>
+      <li>Completeness checks, living documentation, and screen sketches linked to the flow.</li>
+    </ul>
+    <p class="muted">Download the file, then import it in EM-Studio (you can start for free). Chapters, slices, events and every Given / When / Then scenario go along; comments stay here. Just you and your AI? Stay in EVE.</p>
+    <div class="row"><button class="btn primary" data-act="export-em">Download for eventmodelers</button><button class="btn quiet" data-act="export-open">Close</button></div>
+  </div></div>`;
+}
+async function downloadForEventmodelers() {
+  try {
+    const { toCanvas } = await import("./eventmodelers.mjs");
+    const blob = new Blob([JSON.stringify(toCanvas(model), null, 2)], { type: "application/json" });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `${(model.app || "eve-app").replace(/[^\w-]+/g, "-")}-eventmodelers-${new Date().toISOString().slice(0, 10)}.json` });
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  } catch (e) { ui.message = "Couldn't make the export file: " + e.message; render(); }
 }
 
 /* ---------- the board: a traditional event model of the plan ---------- */
@@ -577,6 +605,8 @@ document.addEventListener("click", ev => {
     case "look-colour-add": readLookForm(); ui.lookForm.colours.push("#3f76db"); render(); focus("look-colour-" + (ui.lookForm.colours.length - 1)); break;
     case "look-colour-drop": readLookForm(); ui.lookForm.colours.splice(+el.dataset.i, 1); render(); break;
     case "eve-seen": try { localStorage.setItem("eve-seen-version", ui.eveUpdated.version); } catch (e) {} ui.eveUpdated = null; render(); break;
+    case "export-open": ui.exportOpen = !ui.exportOpen; render(); break;
+    case "export-em": downloadForEventmodelers(); break;
     case "mode": ui.mode = el.dataset.mode; try { localStorage.setItem("eve-mode", ui.mode); } catch (e) {} render(); scrollTo(0, 0); break;
     case "goto": {
       const sl = (model.slices || []).find(s => s.id === el.dataset.slice); if (!sl) break;

@@ -56,6 +56,7 @@ When EVE gets better, your Event Book says so. Tell your AI **"update EVE"**, or
 | `eve/book.html` | The Event Book. |
 | `eve/serve.mjs` | Serves the book and your app, and saves your feedback rounds. `node eve/serve.mjs` |
 | `eve/brief.mjs` | Writes `plan/design-brief.md`, your plan as a brief for a design tool. `node eve/brief.mjs` |
+| `eve/eventmodelers.mjs` | Exports the plan for [eventmodelers.ai](https://eventmodelers.ai) (EM-Studio by Nebulit), for working on the model with a team or AI agents. Also the Event Book's **Export** button. |
 | `eve/update.mjs` | Updates the EVE tools to the newest version, leaving your plan and app alone. `node eve/update.mjs` |
 | `eve/test.mjs` | Runs your app's tests, writes `plan/built.json`, and says how many planned scenarios pass. `node eve/test.mjs` |
 | `sample/todo/` | A small app planned and built this way: its plan, its feedback threads and its code. Try `node eve/serve.mjs sample/todo`. |
