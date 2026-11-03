@@ -276,7 +276,8 @@ function render() {
     </div></main>` : ui.mode === "board" ? `<main class="board-main">
       ${ui.newRound ? `<div class="board-hint"><button class="btn primary" data-act="reload">Show the new round</button></div>` : ""}
       <p class="board-hint">The plan as an event model: time runs left to right. Commands and views on top, the events they cause and read below. Tap a sticky to open it in the book.</p>
-      ${renderBoard(V, chapters, slices)}</main>` : `<main><div class="wrap stack">
+      ${renderBoard(V, chapters, slices)}
+      <p class="board-hint">Event Modeling is <a href="https://eventmodeling.org/about/" target="_blank" rel="noopener">Adam Dymitruk</a>'s method; this board follows it.</p></main>` : `<main><div class="wrap stack">
       ${ui.newRound ? `<div class="note new"><strong>A new round is ready.</strong><div class="row"><button class="btn primary" data-act="reload">Show the new round</button><span class="muted">Finish what you're typing first; it's saved.</span></div></div>` : ""}
       ${ui.message ? `<div class="note new" role="status">${esc(ui.message)}</div>` : ""}
       ${ui.eveUpdated ? `<div class="note new" role="status"><p><strong>EVE was updated.</strong> <span class="muted">You now have ${esc(ui.eveUpdated.version)}.</span></p>${ui.eveUpdated.notes.length ? `<ul class="eve-notes">${ui.eveUpdated.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}<div><button class="btn" data-act="eve-seen">Got it</button></div></div>` : ""}

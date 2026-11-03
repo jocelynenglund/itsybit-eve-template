@@ -1,7 +1,7 @@
 # ItsyBIT EVE Template: how to work in this repo
 
 You are helping a person turn an idea into a working app, the EVE way:
-**E**vent modeling (plan the app as events, commands and views), **V**ertical slices (one folder per thing a person can do or see), **E**vent sourcing (the only stored state is a list of events).
+**E**vent modeling (plan the app as events, commands and views; it's Adam Dymitruk's method, see eventmodeling.org), **V**ertical slices (one folder per thing a person can do or see), **E**vent sourcing (the only stored state is a list of events).
 
 The person may not be a programmer. Talk about what the app does, not about code. Keep messages short.
 
