@@ -38,6 +38,32 @@ header.top .wrap{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;ju
 .mark svg{width:44px;height:38px;display:block}
 .brand small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;color:var(--muted);font-size:13px}
 .pills{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;font-variant-numeric:tabular-nums}
+/* Book | Board switch */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:2px 11px;font-size:13px;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:600}
+/* Board: the traditional Event Modeling timeline. Columns are slices in plan order; commands and views on top, events below. */
+main.board-main{padding:14px 0 110px}
+.board-hint{max-width:900px;margin:0 auto 10px;padding:0 16px;color:var(--muted);font-size:13px}
+.board{position:relative;overflow-x:auto;padding:4px 16px 24px}
+.board svg.arrows{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
+.bwrap{display:flex;gap:0;align-items:stretch;width:max-content;margin:0 auto}
+.blabels{display:grid;grid-template-rows:34px 1fr 1fr;gap:14px;padding-right:10px;position:sticky;left:-16px;z-index:2;background:var(--paper)}
+.blabels span{font:600 11px/1.2 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);writing-mode:vertical-rl;transform:rotate(180deg);align-self:center;justify-self:center}
+.bch{display:grid;grid-template-rows:34px auto;border-left:1px dashed var(--line);padding:0 10px}
+.bch-name{font:600 12px/34px var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);white-space:nowrap}
+.bcols{display:flex;gap:18px}
+.bcol{display:grid;grid-template-rows:minmax(118px,auto) minmax(96px,auto);gap:74px;width:150px}
+.blane{display:flex;flex-direction:column;gap:8px;justify-content:flex-start}
+.blane.top{justify-content:flex-end}
+.sticky{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;width:150px;min-height:78px;padding:9px 10px;border-radius:6px;background:color-mix(in srgb,var(--k) 22%,var(--surface));border-top:5px solid var(--k);color:var(--ink);font:600 14px/1.25 var(--body);box-shadow:0 6px 16px -12px rgba(0,0,0,.6);overflow-wrap:anywhere}
+button.sticky{cursor:pointer} button.sticky:hover{background:color-mix(in srgb,var(--k) 32%,var(--surface))}
+button.sticky:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sticky small{font:600 10px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.sticky.command{--k:var(--command)} .sticky.view{--k:var(--view)} .sticky.automation{--k:var(--auto)} .sticky.event{--k:var(--event);min-height:62px}
+.sticky .st{margin-top:auto;font:500 11px/1 var(--mono);color:var(--muted)}
+.sticky .st.built{color:var(--pass)} .sticky .st.refined{color:var(--ink)}
+.bempty{height:62px}
 /* Scrolled down: the header folds to one slim row (logo, title, counts); back at the top it opens again. */
 body.scrolled header.top .wrap{flex-wrap:nowrap;padding-top:7px;padding-bottom:7px;gap:12px}
 body.scrolled .brand{align-items:center;min-width:0;gap:8px}
@@ -135,7 +161,7 @@ const POLL_MS = 4000;
 
 let model = null, modelText = "", built = null, builtText = "", loadError = "";
 let draft = { events: [], sent: "" };
-const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false, openDone: new Set(), lookForm: null };
+const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false, openDone: new Set(), lookForm: null, mode: (() => { try { return localStorage.getItem("eve-mode") === "board" ? "board" : "book"; } catch (e) { return "book"; } })() };
 
 /* ---------- loading ---------- */
 async function fetchText(path) {
@@ -235,13 +261,17 @@ function render() {
       <div class="brand"><div class="mark" aria-hidden="true" title="itsyBIT EVE"><svg viewBox="0 0 140 120"><rect x="5" y="5" width="90" height="110" rx="16" fill="#9B2335"/><circle cx="50" cy="42" r="22" fill="none" stroke="#fff" stroke-width="8"/><line x1="30" y1="92" x2="70" y2="92" stroke="#fff" stroke-width="8" stroke-linecap="round"/><circle cx="121" cy="27" r="11" style="fill:var(--command)"/><circle cx="121" cy="60" r="11" style="fill:var(--event)"/><circle cx="121" cy="93" r="11" style="fill:var(--view)"/></svg></div>
         <div><h1>${esc(model.app || "Your app")} · Event Book</h1><small title="${esc(model.idea || "")}">Round ${esc(model.round || 1)}${model.idea ? " · " + esc(model.idea) : ""}</small></div></div>
       <div class="pills">
+        <span class="seg" role="group" aria-label="View"><button data-act="mode" data-mode="book" aria-pressed="${ui.mode === "book"}">Book</button><button data-act="mode" data-mode="board" aria-pressed="${ui.mode === "board"}">Board</button></span>
         ${done.size && open.length
           ? `<span class="pill ${allRefined ? "ok" : ""}">${nOpenRefined} of ${open.length} new ${open.length === 1 ? "slice" : "slices"} refined</span><span class="pill ok">${done.size} built</span>`
           : `<span class="pill ${allRefined ? "ok" : ""}">${nRefined} of ${slices.length} slices refined</span>`}
         ${b.total ? `<span class="pill ${b.passing === b.total ? "ok" : ""}">${b.passing} of ${b.total} scenarios pass</span>` : ""}
         ${b.any ? `<a class="pill link" href="${esc(ROOT)}app/">Open the app</a>` : ""}
       </div></div></header>
-    <main><div class="wrap stack">
+    ${ui.mode === "board" ? `<main class="board-main">
+      ${ui.newRound ? `<div class="board-hint"><button class="btn primary" data-act="reload">Show the new round</button></div>` : ""}
+      <p class="board-hint">The plan as an event model: time runs left to right. Commands and views on top, the events they cause and read below. Tap a sticky to open it in the book.</p>
+      ${renderBoard(V, chapters, slices)}</main>` : `<main><div class="wrap stack">
       ${ui.newRound ? `<div class="note new"><strong>A new round is ready.</strong><div class="row"><button class="btn primary" data-act="reload">Show the new round</button><span class="muted">Finish what you're typing first; it's saved.</span></div></div>` : ""}
       ${ui.message ? `<div class="note new" role="status">${esc(ui.message)}</div>` : ""}
       ${ui.eveUpdated ? `<div class="note new" role="status"><p><strong>EVE was updated.</strong> <span class="muted">You now have ${esc(ui.eveUpdated.version)}.</span></p>${ui.eveUpdated.notes.length ? `<ul class="eve-notes">${ui.eveUpdated.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}<div><button class="btn" data-act="eve-seen">Got it</button></div></div>` : ""}
@@ -252,9 +282,79 @@ function render() {
       ${!locked() ? composerOrButton({ kind: "board" }, "Add a general comment") : ""}
       ${chapters.map(ch => renderChapter(ch, slices.filter(s => s.chapter === ch), V, done)).join("")}
       ${orphans.length ? `<section class="chapter"><h2>Other</h2>${orphans.map(s => done.has(s.id) ? renderDone(s, V) : renderSlice(s, V)).join("")}</section>` : ""}
-    </div></main>
+    </div></main>`}
     ${renderBar()}`;
+  if (ui.mode === "board") requestAnimationFrame(drawArrows);
 }
+
+/* ---------- the board: a traditional event model of the plan ---------- */
+const words = n => String(n || "").replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+function sliceStatus(sl, V) {
+  const scen = sl.scenarios || [];
+  if (built && built.map.size && scen.length && scen.every(sc => { const r = built.map.get(sl.name + "\u0000" + sc.title); return r && r.passing; })) return ["built", "✓ built"];
+  return V.refined[sl.id] ? ["refined", "refined"] : ["", "not refined"];
+}
+function renderBoard(V, chapters, slices) {
+  const groups = chapters.map(ch => [ch, slices.filter(s => s.chapter === ch)]);
+  const orphans = slices.filter(s => !s.chapter);
+  if (orphans.length) groups.push(["Other", orphans]);
+  const col = sl => {
+    const k = kindOf(sl), [cls, label] = sliceStatus(sl, V);
+    const evs = k === "view" ? [] : (sl.produces || []);
+    return `<div class="bcol">
+      <div class="blane top"><button class="sticky ${k}" data-act="goto" data-slice="${esc(sl.id)}" data-node="s:${esc(sl.id)}" data-reads="${esc((sl.reads || []).join(" "))}"><small>${kindLabel[k]}</small>${esc(words(sl.name))}<span class="st ${cls}">${label}</span></button></div>
+      <div class="blane">${evs.length ? evs.map(e => `<div class="sticky event" data-node="e:${esc(sl.id)}:${esc(e)}" data-ev="${esc(e)}" data-from="s:${esc(sl.id)}"><small>Event</small>${esc(words(e))}</div>`).join("") : `<div class="bempty"></div>`}</div>
+    </div>`;
+  };
+  return `<div class="board" id="board"><svg class="arrows" id="arrows" aria-hidden="true"></svg><div class="bwrap">
+    <div class="blabels"><span></span><span>Commands · views</span><span>Events</span></div>
+    ${groups.filter(g => g[1].length).map(([ch, list]) => `<section class="bch"><div class="bch-name">${esc(ch)}</div><div class="bcols">${list.map(col).join("")}</div></section>`).join("")}
+  </div></div>`;
+}
+// Arrows: command → the events it causes; event → each view that reads it (the latest one to its left, else any).
+function drawArrows() {
+  const board = document.getElementById("board"), svg = document.getElementById("arrows");
+  if (!board || !svg) return;
+  const b = board.getBoundingClientRect();
+  const box = el => { const r = el.getBoundingClientRect(); return { l: r.left - b.left + board.scrollLeft, t: r.top - b.top, w: r.width, h: r.height }; };
+  svg.setAttribute("width", board.scrollWidth); svg.setAttribute("height", board.scrollHeight);
+  const paths = [];
+  const line = (x1, y1, x2, y2, curve) => paths.push(curve
+    ? `<path d="M${x1},${y1} C${x1},${(y1 + y2) / 2} ${x2},${(y1 + y2) / 2} ${x2},${y2}" />`
+    : `<path d="M${x1},${y1} L${x2},${y2}" />`);
+  const events = [...board.querySelectorAll(".sticky.event")];
+  for (const ev of events) {
+    const from = board.querySelector(`[data-node="${ev.dataset.from}"]`); if (!from) continue;
+    const a = box(from), c = box(ev);
+    line(a.l + a.w / 2, a.t + a.h, c.l + c.w / 2, c.t - 4);
+  }
+  // Event → view arrows: spread their ends along each sticky's edge and give each its own height, so they don't bunch up.
+  const links = [];
+  for (const v of board.querySelectorAll("button.sticky.view, button.sticky.automation")) {
+    const reads = (v.dataset.reads || "").split(" ").filter(Boolean); if (!reads.length) continue;
+    const vb = box(v);
+    for (const name of reads) {
+      const cands = events.filter(e => e.dataset.ev === name);
+      if (!cands.length) continue;
+      const left = cands.filter(e => box(e).l < vb.l);
+      links.push([(left.length ? left : cands).reduce((best, e) => (box(e).l > box(best).l ? e : best)), v]);
+    }
+  }
+  const outs = new Map(), ins = new Map();
+  for (const [e, v] of links) { outs.set(e, (outs.get(e) || 0) + 1); ins.set(v, (ins.get(v) || 0) + 1); }
+  const seenOut = new Map(), seenIn = new Map();
+  links.forEach(([e, v], i) => {
+    const s = box(e), t = box(v);
+    const io = seenOut.get(e) || 0, ii = seenIn.get(v) || 0; seenOut.set(e, io + 1); seenIn.set(v, ii + 1);
+    const x1 = s.l + s.w * (0.25 + 0.6 * (io + 0.5) / outs.get(e)), y1 = s.t;
+    const x2 = t.l + t.w * (0.2 + 0.6 * (ii + 0.5) / ins.get(v)), y2 = t.t + t.h + 4;
+    const lift = 18 + (i % 4) * 12;
+    paths.push(`<path d="M${x1},${y1} C${x1},${y1 - lift} ${x2},${y2 + lift} ${x2},${y2}" />`);
+  });
+  svg.innerHTML = `<defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
+    <g fill="none" stroke="var(--muted)" stroke-width="1.6" marker-end="url(#ah)" opacity=".75">${paths.join("")}</g>`;
+}
+addEventListener("resize", () => { if (ui.mode === "board") drawArrows(); });
 
 function intro(allRefined, b, followUp) {
   if (followUp && !allRefined) return `<div class="note"><p>The new slices are open below; the ones already built are folded away (tap one to open it). Comment on the new ones, add the scenarios you're missing, and tick <b>Refined</b> when a slice is right. Then press <b>Done with feedback</b> and tell your AI <b>done</b>.</p></div>`;
@@ -477,6 +577,16 @@ document.addEventListener("click", ev => {
     case "look-colour-add": readLookForm(); ui.lookForm.colours.push("#3f76db"); render(); focus("look-colour-" + (ui.lookForm.colours.length - 1)); break;
     case "look-colour-drop": readLookForm(); ui.lookForm.colours.splice(+el.dataset.i, 1); render(); break;
     case "eve-seen": try { localStorage.setItem("eve-seen-version", ui.eveUpdated.version); } catch (e) {} ui.eveUpdated = null; render(); break;
+    case "mode": ui.mode = el.dataset.mode; try { localStorage.setItem("eve-mode", ui.mode); } catch (e) {} render(); scrollTo(0, 0); break;
+    case "goto": {
+      const sl = (model.slices || []).find(s => s.id === el.dataset.slice); if (!sl) break;
+      ui.mode = "book"; try { localStorage.setItem("eve-mode", "book"); } catch (e) {}
+      ui.openDone.add(sl.id); if (sl.chapter) ui.openDone.add("ch:" + sl.chapter);
+      render();
+      const t = document.getElementById("slice-" + sl.id);
+      if (t) scrollTo({ top: t.getBoundingClientRect().top + scrollY - 110 });
+      break;
+    }
     case "toggle-done": { const k = el.dataset.key; ui.openDone.has(k) ? ui.openDone.delete(k) : ui.openDone.add(k); render(); break; }
     case "reload": ui.newRound = false; ui.compose = null; ui.addFor = null; modelText = ""; loadAll(true); break;
   }
