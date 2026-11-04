@@ -1,4 +1,4 @@
-// What's new: the site's changelog, from git. site/whats-new.sh writes whats-new.json
+// What's new: the site's changelog, from git. eve/site/whats-new.sh writes whats-new.json
 // at deploy time; this shows a bottom-right pill while this device hasn't read the
 // newest entry, and a panel of recent changes when tapped. Reading it retires the pill
 // until the next deploy. No-ops when whats-new.json is absent (local dev).

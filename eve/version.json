@@ -1,7 +1,14 @@
 {
-  "version": "2026-11-04",
+  "version": "2026-11-04.2",
   "note": "For maintainers: on every release, bump version (YYYY-MM-DD, then .2, .3 … for more releases that day) and add an entry at the top of releases, in words the person using EVE understands.",
   "releases": [
+    {
+      "version": "2026-11-04.2",
+      "notes": [
+        "EVE now lives in one folder, eve/. Everything at the top level is yours: app/, plan/, design/, your README and AGENTS.md. Updating moves an older copy over by itself.",
+        "A new App tab in the Event Book shows your app at phone or laptop size."
+      ]
+    },
     {
       "version": "2026-11-04",
       "notes": [

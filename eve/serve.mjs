@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Serve the Event Book and the app, and save feedback from the book.
 //   node eve/serve.mjs              (this folder's plan/ and app/)
-//   node eve/serve.mjs sample/todo  (the sample)
+//   node eve/serve.mjs eve/sample/todo  (the sample)
 // Then open http://localhost:4747 for the book and http://localhost:4747/app/ for the app.
 // No packages needed: Node 18 or newer.
 

@@ -1,4 +1,4 @@
-# Publishes this repo's site (index.html, the Event Book, the sample) to GitHub Pages,
+# Publishes this repo's site (eve/site/index.html, the Event Book, the sample) to GitHub Pages,
 # with whats-new.json generated from git for the What's new pill.
 # Only runs in the original repo: a copy made from the template skips it.
 name: Pages
@@ -24,11 +24,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - run: node eve/test.mjs sample/todo
-      - run: site/whats-new.sh whats-new.json
+      - run: node eve/test.mjs eve/sample/todo
+      # The site's files live in eve/site/. Put the published site together so every old link still works:
+      # / (eve/site/index.html), /site/ (its images and the What's-new pill), /eve/ (the Event Book, the
+      # sample at /eve/sample/), and /sample/ (where the sample used to be).
+      - name: Assemble the site
+        run: |
+          mkdir -p _site/site
+          cp eve/site/index.html _site/index.html
+          cp -r eve/site/. _site/site/
+          cp -r eve _site/eve
+          cp -r eve/sample _site/sample
+          eve/site/whats-new.sh _site/whats-new.json
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Generate whats-new.json from git history — the user-facing changelog the
 # "What's new" pill reads. Portable: run locally for dev or in CI at deploy.
-# Deps: git + python3 only. Usage: site/whats-new.sh [outfile]  (default whats-new.json)
+# Deps: git + python3 only. Usage: eve/site/whats-new.sh [outfile]  (default whats-new.json)
 set -euo pipefail
 OUT="${1:-whats-new.json}"
 
