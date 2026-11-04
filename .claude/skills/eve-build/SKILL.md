@@ -1,16 +1,16 @@
 ---
 name: eve-build
-description: Build an EVE app from its refined plan, slice by slice and test-first, following sample/todo. Use when the person says "start building", "build it", or "build the app" after planning with the Event Book.
+description: Build an EVE app from its refined plan, slice by slice and test-first, following eve/sample/todo. Use when the person says "start building", "build it", or "build the app" after planning with the Event Book.
 ---
 
 # Build the app
 
 0. **Only refined plans.** If any slice in `plan/model.json` has `refined: false`, list those slices by name, say they need a tick in the book first, and stop.
-1. **Set up `app/`** (only if it doesn't exist yet): copy `sample/todo/app/lib/` (store.js, gwt.mjs), `package.json`, `index.html`, `main.js` and `style.css` from `sample/todo/app/`. Change the title, the store key (`createStore("<app-id>")`) and the page content to this app. Delete the sample's slices from `main.js`. If `design/` has a design (from eve-design), use its colours, fonts and layout in `style.css` and `index.html` instead of the sample's.
+1. **Set up `app/`** (only if it doesn't exist yet): copy `eve/sample/todo/app/lib/` (store.js, gwt.mjs), `package.json`, `index.html`, `main.js` and `style.css` from `eve/sample/todo/app/`. Change the title, the store key (`createStore("<app-id>")`) and the page content to this app. Delete the sample's slices from `main.js`. If `design/` has a design (from eve-design), use its colours, fonts and layout in `style.css` and `index.html` instead of the sample's.
 2. **Only what isn't built.** Run `node eve/test.mjs` first. Leave slices whose scenarios all pass alone (only touch them to keep them green). Build the rest, plus the new scenarios of slices that changed.
 3. **Order:** commands in the order of the events they produce (the order of `events` in the plan), then views, then automations.
 4. **For each slice:**
-   1. Make `app/slices/<slice id>/`. Write `<slice id>.test.mjs` with one test for every planned scenario, **same titles**, using `command(...)` or `view(...)` from `../../lib/gwt.mjs` (see `sample/todo/app/slices/*/*.test.mjs`). Fill in realistic example data.
+   1. Make `app/slices/<slice id>/`. Write `<slice id>.test.mjs` with one test for every planned scenario, **same titles**, using `command(...)` or `view(...)` from `../../lib/gwt.mjs` (see `eve/sample/todo/app/slices/*/*.test.mjs`). Fill in realistic example data.
    2. Write `decide.js` (or `project.js`) with the function body `throw new Error("not built yet")`. Run `node eve/test.mjs`. **Before writing any real code, read its output:** every scenario of this slice must be listed under `Failing:` marked `(not built yet)`. If one passes or fails for another reason, fix the test first. Say in one line that you saw them fail (e.g. "AddHabit: 4 failing, not built yet").
    3. Implement it until `node eve/test.mjs` shows this slice's scenarios passing. Keep `decide`/`project` pure.
    4. Wire it into `app/main.js` and `app/index.html` (a form or button for a command, a rendered list or panel for a view).

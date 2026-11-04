@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Export an EVE plan to eventmodelers.ai (EM-Studio by Nebulit): a canvas file you import there.
 //   node eve/eventmodelers.mjs              writes plan/eventmodelers.json
-//   node eve/eventmodelers.mjs sample/todo  the same for the sample
+//   node eve/eventmodelers.mjs eve/sample/todo  the same for the sample
 // The Event Book's Export button uses toCanvas() from this file too.
 //
 // Each chapter becomes a timeline, each slice a column: commands and views (read models) in the

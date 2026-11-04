@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Run an EVE app's Given/When/Then tests and record what is built.
 //   node eve/test.mjs            (the app in this folder: app/ and plan/)
-//   node eve/test.mjs sample/todo
+//   node eve/test.mjs eve/sample/todo
 // Writes plan/built.json, which the Event Book reads to show what is built,
 // and checks every scenario in plan/model.json has a passing test with the same title.
 

@@ -2,7 +2,7 @@
 // Turn the plan into a design brief that any design tool can take: the screens, what someone can do
 // and see on each, the messages they can get, and example content from the scenarios.
 //   node eve/brief.mjs              writes plan/design-brief.md
-//   node eve/brief.mjs sample/todo  the same for the sample
+//   node eve/brief.mjs eve/sample/todo  the same for the sample
 
 import fs from "node:fs";
 import path from "node:path";
