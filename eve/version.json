@@ -1,7 +1,14 @@
 {
-  "version": "2026-11-03.4",
+  "version": "2026-11-04",
   "note": "For maintainers: on every release, bump version (YYYY-MM-DD, then .2, .3 … for more releases that day) and add an entry at the top of releases, in words the person using EVE understands.",
   "releases": [
+    {
+      "version": "2026-11-04",
+      "notes": [
+        "Fix: with your app open in two tabs, events from one tab could be wiped out by the other. The store now reads the saved events before every decision and append, and other tabs redraw by themselves.",
+        "update EVE fixes your app's app/lib/store.js too, if you never changed it. If you did, copy sample/todo/app/lib/store.js over it."
+      ]
+    },
     {
       "version": "2026-11-03.4",
       "notes": [
