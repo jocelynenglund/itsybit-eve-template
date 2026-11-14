@@ -66,13 +66,18 @@ export const FoldedSliceRow = v => `<article class="slice ${v.kind} done is-refi
 
 const ev = e => `<span class="ev">${esc(e)}</span>`;
 
+// Tried in the app: a tick for a passing scenario of a built slice.
+const TryTick = (s) => !s.tried ? "" : s.tried.state === "done"
+  ? `<span class="badge pass tick">✓ tried</span>`
+  : s.tried.canTick ? `<button class="btn tick ${s.tried.state === "now" ? "on" : ""}" data-act="tried" data-slice="${esc(s.sliceId)}" data-scenario="${esc(s.id)}" aria-pressed="${s.tried.state === "now"}" title="I tried this in the app and it does what it says">✓ tried${s.tried.state === "now" ? " (not sent yet)" : ""}</button>` : "";
+
 export const ScenarioCard = s => {
-  if (s.folded) return `<div class="sc" data-key="${esc(s.key)}"><button class="done-row sc-row" data-act="sc-open" data-key="${esc(s.key)}" aria-expanded="false"><span class="dot pass" title="test passes"></span><span class="name">${esc(s.title)}</span><span class="chev">▸ show</span></button></div>`;
+  if (s.folded) return `<div class="sc" data-key="${esc(s.key)}"><div class="row sc-line"><button class="done-row sc-row" data-act="sc-open" data-key="${esc(s.key)}" aria-expanded="false"><span class="dot pass" title="test passes"></span><span class="name">${esc(s.title)}</span><span class="chev">▸ show</span></button>${TryTick(s)}</div></div>`;
   const then = s.then.refused != null ? `<span class="refuse">refused</span> “${esc(s.then.refused)}”`
     : s.then.events ? s.then.events.map(ev).join(" ") : s.then.shows != null ? `shows ${esc(s.then.shows)}` : `<span class="muted">nothing</span>`;
   return `<div class="sc" data-key="${esc(s.key)}">
     <div class="sc-title"><strong><span class="dot ${s.dot}" title="${s.dotTitle}"></span>${esc(s.title)} ${s.isNew ? `<span class="tag new">New</span>` : ""}</strong>
-      ${s.foldable ? `<button class="btn quiet" data-act="sc-open" data-key="${esc(s.key)}" aria-expanded="true">▾ fold</button>` : ""}${s.canRemove ? `<button class="btn quiet" data-act="drop-scenario" data-id="${esc(s.id)}">Remove</button>` : s.canComment ? `<button class="btn quiet" data-act="compose" data-kind="scenario" data-slice="${esc(s.sliceId)}" data-scenario="${esc(s.id)}">Comment</button>` : ""}</div>
+      <span class="row">${TryTick(s)}${s.tried && s.tried.canReport && s.tried.state !== "done" ? `<button class="btn quiet" data-act="compose" data-kind="problem" data-slice="${esc(s.sliceId)}" data-scenario="${esc(s.id)}">Doesn't work</button>` : ""}${s.foldable ? `<button class="btn quiet" data-act="sc-open" data-key="${esc(s.key)}" aria-expanded="true">▾ fold</button>` : ""}${s.canRemove ? `<button class="btn quiet" data-act="drop-scenario" data-id="${esc(s.id)}">Remove</button>` : s.canComment ? `<button class="btn quiet" data-act="compose" data-kind="scenario" data-slice="${esc(s.sliceId)}" data-scenario="${esc(s.id)}">Comment</button>` : ""}</span></div>
     <div class="gwt"><span class="k">Given</span><div class="v">${s.given.length ? s.given.map(ev).join(" ") : `<span class="muted">nothing</span>`}</div>
       <span class="k">When</span><div class="v">${s.when.opens ? `someone opens <code>${esc(s.when.opens)}</code>` : `<code>${esc(s.when.command)}</code>`}</div>
       <span class="k">Then</span><div class="v">${then}</div></div>

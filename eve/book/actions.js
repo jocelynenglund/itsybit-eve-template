@@ -66,6 +66,7 @@ const taps = {
     S.changed(); scrollToSlice(sl.id);
   },
   fold: el => { const id = el.dataset.slice; S.fold(id, !screen.folded.has(id)); S.changed(); const t = $("slice-" + id); if (t && t.getBoundingClientRect().top < 90) scrollToSlice(id); },
+  tried: el => { const { slice, scenario } = el.dataset, mine = e => e.type === "ScenarioTried" && e.data.sliceId === slice && e.data.scenarioId === scenario; S.given(mine) ? S.takeBack(mine) : S.give("ScenarioTried", { sliceId: slice, scenarioId: scenario }); },
   works: el => { const id = el.dataset.slice, mine = e => e.type === "SliceWorks" && e.data.sliceId === id; S.given(mine) ? S.takeBack(mine) : S.give("SliceWorks", { sliceId: id }); },
   "sc-open": el => { const k = el.dataset.key; screen.openSc.has(k) ? screen.openSc.delete(k) : screen.openSc.add(k); S.changed(); },
   filter: el => { screen.filter = el.dataset.f; S.changed(); },
@@ -108,7 +109,7 @@ export function listen() {
       if (c.part) data.part = c.part;
       if (c.threadId) data.threadId = c.threadId;
       screen.compose = null;
-      if (c.kind === "problem") { data.problem = true; S.takeBack(e => e.type === "SliceWorks" && e.data.sliceId === c.sliceId); }
+      if (c.kind === "problem") { data.problem = true; S.takeBack(e => (e.type === "SliceWorks" && e.data.sliceId === c.sliceId) || (e.type === "ScenarioTried" && e.data.sliceId === c.sliceId && (!c.scenarioId || e.data.scenarioId === c.scenarioId))); }
       S.give("CommentAdded", data);
     } else if (form === "look") {
       readLookForm();

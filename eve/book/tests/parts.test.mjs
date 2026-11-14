@@ -57,6 +57,7 @@ const planning = replay([{ type: "PlanLoaded", data: { ...model, slices: model.s
 draws("FoldAllButton", B.FoldAllButton(foldAll(planning, S())), "Fold the 4 refined slices");
 draws("ChapterList", B.ChapterList(chapterList(book, S()), e => `<i>${e.id}:${e.as}</i>`), "<h2>Todos</h2>", "add-todo:built", "todo-list:card");
 draws("SliceCard", B.SliceCard(sliceCard(book, S(), "todo-list")), "TodoList", "problem reported", "Newest first?", "Shows a completed todo as done");
+test("SliceCard offers a tick on each scenario to try", () => { const h = B.SliceCard(sliceCard(book, S(), "add-todo")); for (const t of ['data-act="tried"', 'data-scenario="add-todo-2"', "✓ tried"]) assert.ok(h.includes(t), t); });
 draws("FoldedSliceRow", B.FoldedSliceRow(foldedSlice(book, "add-todo")), "AddTodo", "2 scenarios", "checked");
 draws("BuiltSliceRow", B.BuiltSliceRow(builtSlice(book, "add-todo")), "AddTodo", "Built", "▸ show");
 draws("EventModelBoard", EventModelBoard(eventModelBoard(book)), "Todo List", 'data-reads="TodoAdded TodoCompleted TodoRemoved"', "✓ built");
