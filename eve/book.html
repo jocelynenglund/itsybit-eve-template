@@ -735,7 +735,10 @@ document.addEventListener("change", ev => {
   const el = ev.target;
   if (el.dataset.act !== "refine") return;
   const id = el.dataset.slice;
-  if (!el.checked) setFolded(id, false);
+  // Ticking Refined folds the slice to one line; unticking opens it. Keep its row where it was on screen.
+  setFolded(id, el.checked);
+  const art = document.getElementById("slice-" + id), before = art ? art.getBoundingClientRect().top : null;
+  requestAnimationFrame(() => { const now = document.getElementById("slice-" + id); if (now && before != null) scrollBy(0, now.getBoundingClientRect().top - before); });
   const mine = draft.events.findIndex(e => (e.type === "SliceMarkedRefined" || e.type === "SliceRefinedCleared") && e.data.sliceId === id);
   if (mine >= 0) { draft.events.splice(mine, 1); saveDraft(); render(); }
   else add(el.checked ? "SliceMarkedRefined" : "SliceRefinedCleared", { sliceId: id });
