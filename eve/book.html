@@ -567,7 +567,8 @@ function renderScenario(sl, sc, V, isNew) {
   const dot = r ? (r.passing ? "pass" : "fail") : "";
   // A scenario whose test passes shrinks to one line, unless it has an open thread or a comment being written on it.
   const key = sl.id + "/" + sc.id;
-  const talk = !isNew && V.comments.some(c => c.scenarioId === sc.id && (!c.resolved || c.draft));
+  const roots = V.comments.filter(c => c.scenarioId === sc.id && !c.threadId);
+  const talk = !isNew && (roots.some(c => !c.resolved) || V.comments.some(c => c.scenarioId === sc.id && c.draft));
   const writing = ui.compose && ui.compose.scenarioId === sc.id;
   const foldable = !isNew && r && r.passing && !talk && !writing;
   if (foldable && !ui.openSc.has(key)) return `<div class="sc"><button class="done-row sc-row" data-act="sc-open" data-key="${esc(key)}" aria-expanded="false"><span class="dot pass" title="test passes"></span><span class="name">${esc(sc.title)}</span><span class="chev">▸ show</span></button></div>`;
