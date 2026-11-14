@@ -1,7 +1,17 @@
 {
-  "version": "2026-11-14",
+  "version": "2026-11-14.2",
   "note": "For maintainers: on every release, bump version (YYYY-MM-DD, then .2, .3 … for more releases that day) and add an entry at the top of releases, in words the person using EVE understands.",
   "releases": [
+    {
+      "version": "2026-11-14.2",
+      "notes": [
+        "Filters in the Event Book: show All, To refine, Ready to build or Built slices, with a count on each.",
+        "A search box in the Event Book finds slices by name, event, field or scenario, together with the filters.",
+        "Ticking Refined folds the slice to one line (untick to open it again), and ▾ fold folds one by hand or all at once. The book remembers what you folded.",
+        "Scenarios whose test passes shrink to one line (tap to open), so new and failing ones stand out.",
+        "Tried a built slice in your app? Press Works, or Doesn't work and say what happened. Your AI turns a problem into a failing scenario first, then fixes it."
+      ]
+    },
     {
       "version": "2026-11-14",
       "notes": [

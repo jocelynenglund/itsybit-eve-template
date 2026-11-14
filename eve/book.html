@@ -127,6 +127,18 @@ main{padding:18px 0 120px}
 .slice.done{padding:8px 14px 8px 24px;box-shadow:none}
 .slice.done::before{top:8px;bottom:8px}
 .done-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.filters{gap:8px 12px}
+.search input{padding:10px 14px;border-radius:999px}
+.seg.filter{flex-wrap:wrap}
+.seg button .n{font:500 11px var(--mono);opacity:.75;margin-left:2px}
+.sc-row{flex-wrap:nowrap;align-items:flex-start}
+.sc-row .dot{margin-top:5px}
+.sc-row .name{flex:1;min-width:0;font:700 15px/1.3 var(--display);color:var(--ink)}
+.sc-row .chev{margin-top:3px;white-space:nowrap}
+.sc:has(.sc-row){padding-top:8px}
+.tried{gap:6px 8px}
+.btn.on{border-color:var(--pass);color:var(--pass)}
+.fold-row{width:auto;flex:1;min-width:0}
 .done-row .name{color:var(--muted);font:700 16px var(--display)} .done-row .chev{margin-left:auto;color:var(--muted);font:700 11px var(--mono);text-transform:uppercase;letter-spacing:.06em}
 .chapter.done-ch>h2 .muted{font:400 14px var(--body)}
 .sc{border-top:1px dashed var(--line2);padding-top:10px;display:grid;gap:6px}
@@ -155,8 +167,8 @@ main{padding:18px 0 120px}
 .cm.ai .who b{color:var(--jam)}
 .cm.draft .who::after{content:" · not sent yet";color:var(--jam)}
 .composer{display:grid;gap:6px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px}
-textarea,input[type=text],select{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:8px 11px;width:100%}
-textarea:focus,input[type=text]:focus,select:focus{border-color:var(--ink);outline:none}
+textarea,input[type=text],input[type=search],select{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:8px 11px;width:100%}
+textarea:focus,input[type=text]:focus,input[type=search]:focus,select:focus{border-color:var(--ink);outline:none}
 textarea{min-height:64px;resize:vertical}
 .chip{font:700 13px/1.3 var(--display);border:1.5px dashed var(--line2);background:transparent;border-radius:3px;padding:3px 8px;cursor:pointer;color:var(--muted)}
 .chip[aria-pressed="true"]{border-style:solid;border-color:transparent;background:var(--n-event);color:var(--t-event);box-shadow:var(--note-shadow)}
@@ -188,7 +200,7 @@ const POLL_MS = 4000;
 
 let model = null, modelText = "", built = null, builtText = "", loadError = "";
 let draft = { events: [], sent: "" };
-const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false, openDone: new Set(), lookForm: null, appWidth: "phone", appExists: null, mode: (() => { try { return localStorage.getItem("eve-mode") === "board" ? "board" : "book"; } catch (e) { return "book"; } })() };
+const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false, openDone: new Set(), openSc: new Set(), filter: "all", q: "", lookForm: null, appWidth: "phone", appExists: null, mode: (() => { try { return localStorage.getItem("eve-mode") === "board" ? "board" : "book"; } catch (e) { return "book"; } })() };
 
 /* ---------- loading ---------- */
 async function fetchText(path) {
@@ -226,6 +238,10 @@ function loadDraft() {
   try { draft = JSON.parse(localStorage.getItem(draftKey())) || { events: [], sent: "" }; } catch (e) { draft = { events: [], sent: "" }; }
 }
 function saveDraft() { try { localStorage.setItem(draftKey(), JSON.stringify(draft)); } catch (e) { /* in memory only */ } }
+// Refined slices the person folded away, remembered per app in this browser.
+function foldKey() { return "eve-folded:" + (model.app || "app"); }
+function folded() { if (!ui.folded) { try { ui.folded = new Set(JSON.parse(localStorage.getItem(foldKey())) || []); } catch (e) { ui.folded = new Set(); } } return ui.folded; }
+function setFolded(id, on) { const f = folded(); on ? f.add(id) : f.delete(id); try { localStorage.setItem(foldKey(), JSON.stringify([...f])); } catch (e) { /* in memory only */ } }
 function add(type, data) { draft.events.push({ type, data, at: stamp() }); saveDraft(); render(); }
 function stamp() { const d = new Date(), p = n => String(n).padStart(2, "0"); return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()); }
 function uid(prefix) { return prefix + "-" + Math.random().toString(36).slice(2, 8); }
@@ -236,23 +252,27 @@ function view() {
   const comments = (model.comments || []).map(c => ({ ...c }));
   const added = [];
   const refined = {};
-  for (const sl of model.slices || []) refined[sl.id] = !!sl.refined;
+  const works = {};
+  for (const sl of model.slices || []) { refined[sl.id] = !!sl.refined; works[sl.id] = !!sl.works; }
   let look = model.look || null, lookNew = false;
   for (const e of draft.events) {
     if (e.type === "LookAndFeelSet") { look = e.data; lookNew = true; }
     const d = e.data;
-    if (e.type === "CommentAdded") comments.push({ id: d.commentId, sliceId: d.sliceId, scenarioId: d.scenarioId, part: d.part, threadId: d.threadId, author: "you", text: d.text, at: d.at, draft: true });
+    if (e.type === "CommentAdded") comments.push({ id: d.commentId, sliceId: d.sliceId, scenarioId: d.scenarioId, part: d.part, threadId: d.threadId, author: "you", text: d.text, at: d.at, problem: !!d.problem, draft: true });
     if (e.type === "CommentResolved") { const c = comments.find(x => x.id === d.commentId); if (c) { c.resolved = true; c.resolvedNow = true; } }
     if (e.type === "ScenarioAdded") added.push(d);
     if (e.type === "SliceMarkedRefined") refined[d.sliceId] = true;
     if (e.type === "SliceRefinedCleared") refined[d.sliceId] = false;
+    if (e.type === "SliceWorks") works[d.sliceId] = true;
   }
-  return { comments, added, refined, look, lookNew };
+  return { comments, added, refined, works, look, lookNew };
 }
 function counts() {
-  const c = { comments: 0, scenarios: 0, ticks: 0, resolved: 0, look: 0 };
+  const c = { comments: 0, scenarios: 0, ticks: 0, resolved: 0, look: 0, works: 0, problems: 0 };
   for (const e of draft.events) {
-    if (e.type === "CommentAdded") c.comments++;
+    if (e.type === "CommentAdded" && e.data.problem) c.problems++;
+    else if (e.type === "CommentAdded") c.comments++;
+    else if (e.type === "SliceWorks") c.works++;
     else if (e.type === "ScenarioAdded") c.scenarios++;
     else if (e.type === "CommentResolved") c.resolved++;
     else if (e.type === "LookAndFeelSet") c.look = 1;
@@ -283,6 +303,8 @@ function render() {
   const chapters = (model.chapters || []).map(c => c.name);
   for (const s of slices) if (s.chapter && !chapters.includes(s.chapter)) chapters.push(s.chapter);
   const orphans = slices.filter(s => !s.chapter);
+  // Typing in the search box redraws the book: keep the cursor where it was.
+  const act = document.activeElement, keep = act && act.id === "q" ? [act.selectionStart, act.selectionEnd] : null;
   el.innerHTML =
     `<header class="top"><div class="wrap">
       <div class="brand"><div class="mark" aria-hidden="true" title="itsyBIT EVE"><svg viewBox="0 0 140 120"><rect x="5" y="5" width="90" height="110" rx="16" fill="#9B2335"/><circle cx="50" cy="42" r="22" fill="none" stroke="#fff" stroke-width="8"/><line x1="30" y1="92" x2="70" y2="92" stroke="#fff" stroke-width="8" stroke-linecap="round"/><circle cx="121" cy="27" r="11" style="fill:var(--command)"/><circle cx="121" cy="60" r="11" style="fill:var(--event)"/><circle cx="121" cy="93" r="11" style="fill:var(--view)"/></svg></div>
@@ -309,10 +331,14 @@ function render() {
       ${intro(allRefined, b, done.size && open.length)}
       ${renderThreads(V, t => !t.sliceId, "General comments")}
       ${!locked() ? composerOrButton({ kind: "board" }, "Add a general comment") : ""}
-      ${chapters.map(ch => renderChapter(ch, slices.filter(s => s.chapter === ch), V, done)).join("")}
-      ${orphans.length ? `<section class="chapter"><h2>Other</h2>${orphans.map(s => done.has(s.id) ? renderDone(s, V) : renderSlice(s, V)).join("")}</section>` : ""}
+      <div class="search"><label class="sr" for="q">Search</label><input type="search" id="q" placeholder="Search slices, events, scenarios…" value="${esc(ui.q)}" autocomplete="off"></div>
+      <div class="row spread filters">${filterSwitch(V, slices)}${foldAllButton(V, done)}</div>
+      ${chapters.map(ch => [ch, slices.filter(s => s.chapter === ch && shown(s, V))]).filter(([, l]) => l.length).map(([ch, l]) => renderChapter(ch, l, V, done)).join("")}
+      ${orphans.some(s => shown(s, V)) ? `<section class="chapter"><h2>Other</h2>${orphans.filter(s => shown(s, V)).map(s => done.has(s.id) ? renderDone(s, V) : renderOpen(s, V)).join("")}</section>` : ""}
+      ${slices.some(s => shown(s, V)) ? "" : `<p class="muted">${ui.q.trim() ? `Nothing matches “${esc(ui.q.trim())}”.` : "No slices here right now."}</p>`}
     </div></main>`}
     ${renderBar()}`;
+  if (keep) { const q = document.getElementById("q"); if (q) { q.focus(); q.setSelectionRange(keep[0], keep[1]); } }
   if (ui.mode === "board") requestAnimationFrame(drawArrows);
 }
 
@@ -449,22 +475,55 @@ function isDone(sl, V) {
   if (!V.refined[sl.id] || !scen.length || !built || !built.map.size) return false;
   if (!scen.every(sc => { const r = built.map.get(sl.name + "\u0000" + sc.title); return r && r.passing; })) return false;
   if (V.added.some(a => a.sliceId === sl.id)) return false;
-  return !V.comments.some(c => c.sliceId === sl.id && c.draft);
+  return !V.comments.some(c => c.sliceId === sl.id && (c.draft || (c.problem && !c.resolved)));
+}
+// Filters: every slice is in one state. To refine (not ticked yet), Ready to build (ticked, not built), Built (every scenario passes).
+const FILTERS = [["all", "All"], ["refine", "To refine"], ["ready", "Ready to build"], ["built", "Built"]];
+function stateOf(sl, V) { return isDone(sl, V) ? "built" : V.refined[sl.id] ? "ready" : "refine"; }
+function shown(sl, V) { return (ui.filter === "all" || stateOf(sl, V) === ui.filter) && matches(sl); }
+// Search: every word typed must appear somewhere in the slice: its name, events, fields, scenarios or refusals.
+function matches(sl) {
+  const words_ = ui.q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words_.length) return true;
+  const hay = [sl.name, words(sl.name), sl.chapter, sl.description, ...(sl.produces || []), ...(sl.reads || []), ...(sl.fields || []),
+    ...(sl.scenarios || []).flatMap(sc => [sc.title, sc.when, ...(sc.given || []).map(g => g.type || g), ...((sc.then || {}).events || []).map(e => e.type || e), (sc.then || {}).rejected, (sc.then || {}).view, typeof (sc.then || {}).value === "string" ? sc.then.value : ""])]
+    .filter(Boolean).join(" ").toLowerCase();
+  return words_.every(w => hay.includes(w));
+}
+function filterSwitch(V, slices) {
+  const n = { all: slices.length, refine: 0, ready: 0, built: 0 };
+  for (const s of slices) n[stateOf(s, V)]++;
+  return `<span class="seg filter" role="group" aria-label="Show">${FILTERS.map(([f, l]) => `<button data-act="filter" data-f="${f}" aria-pressed="${ui.filter === f}">${l} <span class="n">${n[f]}</span></button>`).join("")}</span>`;
+}
+// Fold or show every refined slice at once (built ones fold by themselves).
+function foldAllButton(V, done) {
+  const ref = (model.slices || []).filter(s => V.refined[s.id] && !done.has(s.id));
+  if (ref.length < 2) return "";
+  const open = ref.filter(s => !folded().has(s.id)).length;
+  return `<div><button class="btn quiet" data-act="fold-all" data-on="${open ? 1 : 0}">${open ? `▾ Fold the ${ref.length} refined slices` : `▸ Show the ${ref.length} refined slices`}</button></div>`;
 }
 function renderChapter(ch, list, V, done) {
-  const allDone = list.length && list.every(s => done.has(s.id));
+  const allDone = ui.filter === "all" && !ui.q.trim() && list.length && list.every(s => done.has(s.id));
   const isOpen = ui.openDone.has("ch:" + ch);
   if (allDone && !isOpen) return `<section class="chapter done-ch"><h2><button class="done-row" data-act="toggle-done" data-key="${esc("ch:" + ch)}" aria-expanded="false">${esc(ch)} <span class="muted">· ${list.length} built</span><span class="chev">▸ show</span></button></h2></section>`;
   const head = allDone ? `<h2><button class="done-row" data-act="toggle-done" data-key="${esc("ch:" + ch)}" aria-expanded="true">${esc(ch)} <span class="muted">· ${list.length} built</span><span class="chev">▾ hide</span></button></h2>` : `<h2>${esc(ch)}</h2>`;
-  return `<section class="chapter ${allDone ? "done-ch" : ""}">${head}${list.map(s => done.has(s.id) && !allDone ? renderDone(s, V) : renderSlice(s, V)).join("")}</section>`;
+  return `<section class="chapter ${allDone ? "done-ch" : ""}">${head}${list.map(s => done.has(s.id) && !allDone ? renderDone(s, V) : renderOpen(s, V)).join("")}</section>`;
 }
 function renderDone(sl, V) {
   if (ui.openDone.has(sl.id)) return renderSlice(sl, V, true);
   const k = kindOf(sl);
   return `<article class="slice ${k} done" id="slice-${esc(sl.id)}"><button class="done-row" data-act="toggle-done" data-key="${esc(sl.id)}" aria-expanded="false">
-    <span class="tag ${k}">${kindLabel[k]}</span><span class="mono name">${esc(sl.name)}</span><span class="badge pass">Built</span><span class="chev">▸ show</span></button></article>`;
+    <span class="tag ${k}">${kindLabel[k]}</span><span class="mono name">${esc(sl.name)}</span><span class="badge pass">Built</span>${V.works[sl.id] ? `<span class="badge pass">✓ Works</span>` : ""}<span class="chev">▸ show</span></button></article>`;
 }
 
+function renderOpen(sl, V) {
+  if (!V.refined[sl.id] || !folded().has(sl.id)) return renderSlice(sl, V);
+  const k = kindOf(sl);
+  const drafts = V.comments.filter(c => c.sliceId === sl.id && c.draft).length + V.added.filter(a => a.sliceId === sl.id).length;
+  return `<article class="slice ${k} done is-refined" id="slice-${esc(sl.id)}"><div class="row">
+    <button class="done-row fold-row" data-act="fold" data-slice="${esc(sl.id)}" aria-expanded="false"><span class="tag ${k}">${kindLabel[k]}</span><span class="name">${esc(sl.name)}</span><span class="muted">${(sl.scenarios || []).length} scenarios${drafts ? ` · ${drafts} not sent yet` : ""}</span><span class="chev">▸ show</span></button>
+    <label class="refined on"><input type="checkbox" data-act="refine" data-slice="${esc(sl.id)}" checked ${locked() ? "disabled" : ""}>Refined</label></div></article>`;
+}
 function renderSlice(sl, V, folded) {
   const k = kindOf(sl), on = V.refined[sl.id];
   const scen = sl.scenarios || [];
@@ -474,15 +533,24 @@ function renderSlice(sl, V, folded) {
     const pass = res.filter(r => r && r.passing).length, fail = res.filter(r => r && !r.passing).length;
     badge = pass === scen.length && scen.length ? `<span class="badge pass">Built</span>` : fail ? `<span class="badge fail">${pass}/${scen.length} pass</span>` : pass ? `<span class="badge">${pass}/${scen.length} pass</span>` : `<span class="badge">Not built</span>`;
   }
+  const allPass = !!(built && built.map.size && scen.length && scen.every(sc => { const x = built.map.get(sl.name + "\u0000" + sc.title); return x && x.passing; }));
+  const worksNow = draft.events.some(e => e.type === "SliceWorks" && e.data.sliceId === sl.id);
+  const problem = V.comments.some(c => c.sliceId === sl.id && c.problem && !c.resolved);
+  const tried = !allPass ? "" : problem ? `<div class="row tried"><span class="refuse">problem reported</span><span class="muted">Your AI fixes it after you send this round.</span></div>` : `<div class="row tried"><span class="muted">Tried it in the app?</span>${
+    V.works[sl.id] && !worksNow ? `<span class="badge pass">✓ Works</span>`
+    : locked() ? "" : `<button class="btn ${worksNow ? "on" : ""}" data-act="works" data-slice="${esc(sl.id)}" aria-pressed="${worksNow}">✓ Works${worksNow ? " (not sent yet)" : ""}</button>`}${
+    !locked() ? `<button class="btn" data-act="compose" data-kind="problem" data-slice="${esc(sl.id)}">Doesn't work</button>` : ""}</div>
+    ${ui.compose && ui.compose.kind === "problem" && ui.compose.sliceId === sl.id ? renderComposer() : ""}`;
   const flow = k === "view"
     ? `<span class="muted">from</span> ${(sl.reads || []).map(e => `<span class="ev">${esc(e)}</span>`).join(" ")}`
     : `<span class="muted">→</span> ${(sl.produces || []).map(e => `<span class="ev">${esc(e)}</span>`).join(" ")}`;
   return `<article class="slice ${k} ${on ? "is-refined" : ""}" id="slice-${esc(sl.id)}">
     <div class="row spread">
       <div class="row"><span class="tag ${k}">${kindLabel[k]}</span><h3 class="mono">${esc(sl.name)}</h3>${flow}</div>
-      <div class="row">${badge}${folded ? `<button class="btn quiet" data-act="toggle-done" data-key="${esc(sl.id)}" aria-expanded="true">▾ hide</button>` : ""}
+      <div class="row">${badge}${folded ? `<button class="btn quiet" data-act="toggle-done" data-key="${esc(sl.id)}" aria-expanded="true">▾ hide</button>` : on ? `<button class="btn quiet" data-act="fold" data-slice="${esc(sl.id)}" aria-expanded="true">▾ fold</button>` : ""}
         <label class="refined ${on ? "on" : ""}"><input type="checkbox" data-act="refine" data-slice="${esc(sl.id)}" ${on ? "checked" : ""} ${locked() ? "disabled" : ""}>Refined</label></div>
     </div>
+    ${tried}
     ${sl.fields && sl.fields.length ? `<p class="muted">${k === "view" ? "Shows" : "Needs"}: ${sl.fields.map(esc).join(", ")}</p>` : ""}
     ${sl.description ? `<p>${esc(sl.description)}</p>` : ""}
     ${renderThreads(V, t => t.sliceId === sl.id && !t.scenarioId)}
@@ -497,6 +565,12 @@ function renderScenario(sl, sc, V, isNew) {
   const k = kindOf(sl);
   const r = built && built.map.get(sl.name + "\u0000" + sc.title);
   const dot = r ? (r.passing ? "pass" : "fail") : "";
+  // A scenario whose test passes shrinks to one line, unless it has an open thread or a comment being written on it.
+  const key = sl.id + "/" + sc.id;
+  const talk = !isNew && V.comments.some(c => c.scenarioId === sc.id && (!c.resolved || c.draft));
+  const writing = ui.compose && ui.compose.scenarioId === sc.id;
+  const foldable = !isNew && r && r.passing && !talk && !writing;
+  if (foldable && !ui.openSc.has(key)) return `<div class="sc"><button class="done-row sc-row" data-act="sc-open" data-key="${esc(key)}" aria-expanded="false"><span class="dot pass" title="test passes"></span><span class="name">${esc(sc.title)}</span><span class="chev">▸ show</span></button></div>`;
   const given = (sc.given || []).length ? sc.given.map(g => `<span class="ev">${esc(g.type || g)}</span>`).join(" ") : `<span class="muted">nothing</span>`;
   const when = k === "view" ? `someone opens <code>${esc(sl.name)}</code>` : `<code>${esc(sc.when || sl.name)}</code>`;
   const t = sc.then || {};
@@ -506,7 +580,7 @@ function renderScenario(sl, sc, V, isNew) {
     : `<span class="muted">nothing</span>`;
   return `<div class="sc">
     <div class="sc-title"><strong><span class="dot ${dot}" title="${r ? (r.passing ? "test passes" : "test fails") : "no test yet"}"></span>${esc(sc.title)} ${isNew ? `<span class="tag new">New</span>` : ""}</strong>
-      ${isNew ? (!locked() ? `<button class="btn quiet" data-act="drop-scenario" data-id="${esc(sc.id)}">Remove</button>` : "") : (!locked() ? `<button class="btn quiet" data-act="compose" data-kind="scenario" data-slice="${esc(sl.id)}" data-scenario="${esc(sc.id)}">Comment</button>` : "")}</div>
+      ${foldable ? `<button class="btn quiet" data-act="sc-open" data-key="${esc(key)}" aria-expanded="true">▾ fold</button>` : ""}${isNew ? (!locked() ? `<button class="btn quiet" data-act="drop-scenario" data-id="${esc(sc.id)}">Remove</button>` : "") : (!locked() ? `<button class="btn quiet" data-act="compose" data-kind="scenario" data-slice="${esc(sl.id)}" data-scenario="${esc(sc.id)}">Comment</button>` : "")}</div>
     <div class="gwt"><span class="k">Given</span><div class="v">${given}</div>
       <span class="k">When</span><div class="v">${when}</div>
       <span class="k">Then</span><div class="v">${then}</div></div>
@@ -535,7 +609,7 @@ function renderComment(c) {
   const part = c.part ? ` · on ${esc(c.part[0].toUpperCase() + c.part.slice(1))}` : "";
   return `<div class="cm ${c.author === "ai" ? "ai" : ""} ${c.draft ? "draft" : ""}">
     <span class="who"><b>${c.author === "ai" ? "AI" : "You"}</b>${c.at ? " · " + esc(c.at) : ""}${part}</span>
-    <span>${esc(c.text)} ${c.draft && !locked() ? `<button class="btn quiet" data-act="drop-comment" data-id="${esc(c.id)}">Remove</button>` : ""}</span></div>`;
+    <span>${c.problem ? `<span class="refuse">problem</span> ` : ""}${esc(c.text)} ${c.draft && !locked() ? `<button class="btn quiet" data-act="drop-comment" data-id="${esc(c.id)}">Remove</button>` : ""}</span></div>`;
 }
 
 function composerOrButton(target, label) {
@@ -552,8 +626,9 @@ function renderComposer() {
   return `<form class="composer" data-form="comment">
     ${partSelect}
     <label class="sr" for="cm-text">Comment</label>
-    <textarea id="cm-text" placeholder="${c.threadId ? "Reply…" : "What's wrong, missing or unclear?"}" required></textarea>
-    <div class="row"><button class="btn primary" type="submit">${c.threadId ? "Reply" : "Add comment"}</button><button class="btn quiet" type="button" data-act="cancel">Cancel</button></div>
+    ${c.kind === "problem" ? `<strong>What doesn't work in ${esc(((model.slices || []).find(s => s.id === c.sliceId) || {}).name || "this slice")}?</strong>` : ""}
+    <textarea id="cm-text" placeholder="${c.threadId ? "Reply…" : c.kind === "problem" ? "What did you try, and what happened?" : "What's wrong, missing or unclear?"}" required></textarea>
+    <div class="row"><button class="btn primary" type="submit">${c.threadId ? "Reply" : c.kind === "problem" ? "Report problem" : "Add comment"}</button><button class="btn quiet" type="button" data-act="cancel">Cancel</button></div>
   </form>`;
 }
 
@@ -586,6 +661,8 @@ function renderBar() {
   if (c.scenarios) parts.push(c.scenarios + " new scenario" + (c.scenarios > 1 ? "s" : ""));
   if (c.ticks) parts.push(c.ticks + " Refined change" + (c.ticks > 1 ? "s" : ""));
   if (c.resolved) parts.push(c.resolved + " resolved");
+  if (c.works) parts.push(c.works + " tried and working");
+  if (c.problems) parts.push(c.problems + " problem" + (c.problems > 1 ? "s" : ""));
   if (c.look) parts.push("look and feel");
   return `<div class="bar"><div class="wrap">
     <span class="muted">${parts.length ? "Your feedback this round: " + parts.join(" · ") : "No feedback yet this round."}</span>
@@ -651,22 +728,34 @@ document.addEventListener("click", ev => {
       if (ui.mode === "look" && !ui.lookForm && !locked() && !view().look) ui.lookForm = blankLook(); if (ui.mode === "book" || ui.mode === "board") try { localStorage.setItem("eve-mode", ui.mode); } catch (e) {} render(); scrollTo(0, 0); break;
     case "goto": {
       const sl = (model.slices || []).find(s => s.id === el.dataset.slice); if (!sl) break;
-      ui.mode = "book"; try { localStorage.setItem("eve-mode", "book"); } catch (e) {}
-      ui.openDone.add(sl.id); if (sl.chapter) ui.openDone.add("ch:" + sl.chapter);
+      ui.mode = "book"; ui.filter = "all"; ui.q = ""; try { localStorage.setItem("eve-mode", "book"); } catch (e) {}
+      ui.openDone.add(sl.id); if (sl.chapter) ui.openDone.add("ch:" + sl.chapter); setFolded(sl.id, false);
       render();
       const t = document.getElementById("slice-" + sl.id);
       if (t) scrollTo({ top: t.getBoundingClientRect().top + scrollY - 110 });
       break;
     }
+    case "fold": { const id = el.dataset.slice; setFolded(id, !folded().has(id)); render(); const t = document.getElementById("slice-" + id); if (t && t.getBoundingClientRect().top < 90) scrollTo({ top: t.getBoundingClientRect().top + scrollY - 110 }); break; }
+    case "works": { const id = el.dataset.slice, i = draft.events.findIndex(e => e.type === "SliceWorks" && e.data.sliceId === id); i >= 0 ? draft.events.splice(i, 1) : draft.events.push({ type: "SliceWorks", data: { sliceId: id }, at: stamp() }); saveDraft(); render(); break; }
+    case "sc-open": { const k = el.dataset.key; ui.openSc.has(k) ? ui.openSc.delete(k) : ui.openSc.add(k); render(); break; }
+    case "filter": ui.filter = el.dataset.f; render(); break;
+    case "fold-all": { const V = view(); for (const s of model.slices || []) if (V.refined[s.id]) setFolded(s.id, el.dataset.on === "1"); render(); break; }
     case "toggle-done": { const k = el.dataset.key; ui.openDone.has(k) ? ui.openDone.delete(k) : ui.openDone.add(k); render(); break; }
     case "reload": ui.newRound = false; ui.compose = null; ui.addFor = null; modelText = ""; loadAll(true); break;
   }
 });
 
+document.addEventListener("input", ev => { if (ev.target.id === "q") { ui.q = ev.target.value; render(); } });
+document.addEventListener("keydown", ev => { if (ev.target.id === "q" && ev.key === "Escape" && ui.q) { ui.q = ""; render(); } });
+
 document.addEventListener("change", ev => {
   const el = ev.target;
   if (el.dataset.act !== "refine") return;
   const id = el.dataset.slice;
+  // Ticking Refined folds the slice to one line; unticking opens it. Keep its row where it was on screen.
+  setFolded(id, el.checked);
+  const art = document.getElementById("slice-" + id), before = art ? art.getBoundingClientRect().top : null;
+  requestAnimationFrame(() => { const now = document.getElementById("slice-" + id); if (now && before != null) scrollBy(0, now.getBoundingClientRect().top - before); });
   const mine = draft.events.findIndex(e => (e.type === "SliceMarkedRefined" || e.type === "SliceRefinedCleared") && e.data.sliceId === id);
   if (mine >= 0) { draft.events.splice(mine, 1); saveDraft(); render(); }
   else add(el.checked ? "SliceMarkedRefined" : "SliceRefinedCleared", { sliceId: id });
@@ -685,6 +774,7 @@ document.addEventListener("submit", ev => {
     if (partEl && partEl.value) data.part = partEl.value;
     if (c.part) data.part = c.part;
     if (c.threadId) data.threadId = c.threadId;
+    if (c.kind === "problem") { data.problem = true; draft.events = draft.events.filter(e => !(e.type === "SliceWorks" && e.data.sliceId === c.sliceId)); }
     ui.compose = null;
     add("CommentAdded", data);
   } else if (form === "look") {

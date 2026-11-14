@@ -17,7 +17,7 @@ The person may not be a programmer. Talk about what the app does, not about code
 | "update EVE" | Run `node eve/update.mjs`, then `node eve/test.mjs`. Tell them what's new from the notes it prints, in a line or two, and that their app still passes. If it's a git repo, commit it as "Update EVE" | (none) |
 | "start building" | Build every slice test-first, following `eve/sample/todo/` | `.claude/skills/eve-build/SKILL.md` |
 
-The person refines in rounds until **every slice is ticked Refined**. Only they tick Refined. You never set `refined: true` yourself: a slice is refined when their feedback says so (`SliceMarkedRefined`).
+The person refines in rounds until **every slice is ticked Refined**. Once a slice is built, they try it in the app and press **Works** or **Doesn't work** in the Event Book; a "doesn't work" comes in their next round, and you fix it test-first (see eve-refine). Only they tick Refined. You never set `refined: true` yourself: a slice is refined when their feedback says so (`SliceMarkedRefined`).
 
 ## Files
 
@@ -54,7 +54,8 @@ Follow `eve/sample/todo/plan/model.json` exactly. In short:
 - `slices`: each has `id` (kebab-case), `name` (PascalCase), `type` (`command` | `view` | `automation`), `chapter`, `fields`, `produces` (commands) or `reads` (views), `refined`, and `scenarios`.
 - A scenario: `{ id, title, given: [{type}], when: <slice name>, then }`. `then` is `{ events: [{type}] }`, `{ rejected: "reason" }` or `{ view: <name>, value: "what it shows, in words" }`.
 - `look` (optional): what the app should feel like, filled in on the Event Book's Look and feel card: `{ moods: [], colours: ["#hex"], theme ("light"|"dark"|"both"|""), type, likes, device ("phone"|"laptop"|"both"|""), where, notes }`. You copy it from the feedback round; eve-design and `node eve/brief.mjs` use it.
-- `comments`: `{ id, sliceId?, scenarioId?, part? ("given"|"when"|"then"), threadId? (the comment it answers), author ("you"|"ai"), text, at, resolved? }`. No `sliceId` means a general comment.
+- `comments`: `{ id, sliceId?, scenarioId?, part? ("given"|"when"|"then"), threadId? (the comment it answers), author ("you"|"ai"), text, at, resolved?, problem? }`. No `sliceId` means a general comment. `problem: true` means they tried the built slice in the app and it didn't work (eve-refine says what to do).
+- A slice's `works` (optional): true once the person tried the built slice in the app and pressed **Works** in the Event Book (`SliceWorks`). Only they set it; you set it back to false when the slice changes.
 
 ## Rules for the plan
 
