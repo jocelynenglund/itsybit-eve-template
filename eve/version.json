@@ -1,7 +1,13 @@
 {
-  "version": "2026-11-14.2",
+  "version": "2026-11-14.3",
   "note": "For maintainers: on every release, bump version (YYYY-MM-DD, then .2, .3 … for more releases that day) and add an entry at the top of releases, in words the person using EVE understands.",
   "releases": [
+    {
+      "version": "2026-11-14.3",
+      "notes": [
+        "Tick each scenario ✓ tried once you've tried it in the app, or say that one scenario doesn't work. A slice with every scenario tried shows ✓ Works, and a To try filter lists what's left to try."
+      ]
+    },
     {
       "version": "2026-11-14.2",
       "notes": [

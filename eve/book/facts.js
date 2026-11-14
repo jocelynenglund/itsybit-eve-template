@@ -13,6 +13,12 @@ export function allPass(book, sl) {
   return book.tested && scen.length > 0 && scen.every(sc => { const r = result(book, sl, sc); return r && r.passing; });
 }
 
+// The person tried this scenario in the app and it did what it says (or said the whole slice works).
+export const isTried = (book, sl, sc) => book.tried.has(sl.id + "/" + sc.id) || !!book.works[sl.id];
+export const allTried = (book, sl) => (sl.scenarios || []).length > 0 && (sl.scenarios || []).every(sc => isTried(book, sl, sc));
+// Built, and some scenario hasn't been tried in the app yet.
+export const toTry = (book, sl) => isDone(book, sl) && !allTried(book, sl);
+
 export const openProblem = (book, sl) => book.comments.some(c => c.sliceId === sl.id && c.problem && !c.resolved);
 
 // Built: refined, every planned scenario passes, and nothing new from the person touches it.
@@ -41,7 +47,7 @@ export function matches(sl, q) {
   return ws.every(w => hay.includes(w));
 }
 
-export const shown = (book, screen, sl) => (screen.filter === "all" || stateOf(book, sl) === screen.filter) && matches(sl, screen.q);
+export const shown = (book, screen, sl) => (screen.filter === "all" || (screen.filter === "totry" ? toTry(book, sl) : stateOf(book, sl) === screen.filter)) && matches(sl, screen.q);
 
 // How many planned scenarios pass.
 export function testTotals(book) {

@@ -69,7 +69,7 @@ test("App tab before anything is built says so", async t => {
 test("planning: filters by state with counts, and search", async t => {
   const b = await open(t, { kind: "planning", edit: m => { m.slices[1].refined = true; } });
   const counts = await b.page.$$eval("[data-act=filter]", bs => bs.map(x => x.textContent.replace(/\s+/g, " ").trim()));
-  assert.deepEqual(counts, ["All 4", "To refine 3", "Ready to build 1", "Built 0"]);
+  assert.deepEqual(counts, ["All 4", "To refine 3", "Ready to build 1", "Built 0", "To try 0"]);
   await b.page.click("[data-act=filter][data-f=ready]");
   assert.deepEqual(await b.ids(), ["complete-todo"]);
   await b.page.click("[data-act=filter][data-f=built]");
@@ -314,5 +314,30 @@ test("phone: the header folds while scrolling", async t => {
   await b.page.evaluate(() => scrollTo(0, 0)); await b.settle(250);
   assert.ok(!(await b.page.evaluate(() => document.body.classList.contains("scrolled"))));
   assert.ok(await b.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "no sideways scroll");
+  assert.deepEqual(b.errors, []);
+});
+
+test("built slices: tick each scenario tried in the app, or say one doesn't work", async t => {
+  const b = await open(t);
+  const filter = async f => (await b.page.textContent(`[data-act=filter][data-f=${f}]`)).replace(/\s+/g, " ").trim();
+  assert.equal(await filter("totry"), "To try 4");
+  await b.page.click('.sc[data-key="add-todo/add-todo-1"] [data-act=tried]');
+  await b.page.click('.sc[data-key="add-todo/add-todo-2"] [data-act=tried]');
+  assert.match(await b.bar(), /2 scenarios tried/);
+  assert.equal(await filter("totry"), "To try 3", "every scenario of AddTodo is tried");
+  assert.match(await b.page.textContent("#slice-add-todo .tried"), /✓ Works/, "so the slice works");
+  await b.page.click('.sc[data-key="add-todo/add-todo-2"] [data-act=tried]');
+  assert.match(await b.bar(), /1 scenario tried/, "a second tap takes it back");
+
+  await b.page.click('.sc[data-key="complete-todo/complete-todo-3"] .sc-row');
+  await b.page.click('.sc[data-key="complete-todo/complete-todo-3"] [data-kind=problem]');
+  assert.match(await b.page.textContent("form[data-form=comment]"), /What doesn't work in “Refuses a todo that is already done”\?/);
+  await b.page.fill("#cm-text", "I could tick it twice");
+  await b.page.click("form[data-form=comment] button[type=submit]");
+  assert.match(await b.bar(), /1 scenario tried · 1 problem/);
+  const ev = await b.draft();
+  assert.deepEqual(ev.map(e => [e.type, e.data.scenarioId, !!e.data.problem]), [["ScenarioTried", "add-todo-1", false], ["CommentAdded", "complete-todo-3", true]]);
+  await b.page.click("[data-act=filter][data-f=totry]");
+  assert.deepEqual(await b.ids(), ["add-todo", "remove-todo", "todo-list"], "CompleteTodo has a problem, so it isn't built until it's fixed");
   assert.deepEqual(b.errors, []);
 });

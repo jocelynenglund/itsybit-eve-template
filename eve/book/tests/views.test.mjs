@@ -37,6 +37,7 @@ const plan = (kind = "planning", edit) => {
 };
 const testsRan = { type: "TestsRan", data: results };
 const tick = sliceId => ({ type: "SliceMarkedRefined", data: { sliceId } });
+const tried = (sliceId, scenarioId) => ({ type: "ScenarioTried", data: { sliceId, scenarioId } });
 const comment = (data) => ({ type: "CommentAdded", data: { commentId: "c-new", text: "Hm?", at: "2026-11-14 10:00", ...data } });
 const newSlice = m => {
   m.events.push({ name: "TodoRenamed" });
@@ -91,10 +92,12 @@ const search = of("SearchBox", (b, s) => searchBox(s));
 search.scenario("Shows what's typed", S({ q: "overlap" })).given([plan()]).shows({ q: "overlap" });
 
 const filters = of("FilterSwitch", filterSwitch);
-const counts = (on, all, refine, ready, built) => [["all", "All", all], ["refine", "To refine", refine], ["ready", "Ready to build", ready], ["built", "Built", built]].map(([f, label, n]) => ({ f, label, n, on: f === on }));
-filters.scenario("Counts every slice as to refine at first").given([plan()]).shows(counts("all", 4, 4, 0, 0));
-filters.scenario("Moves a ticked slice to ready to build", S({ filter: "ready" })).given([plan(), tick("add-todo")]).shows(counts("ready", 4, 3, 1, 0));
-filters.scenario("Counts built slices once their scenarios pass").given([plan("built", newSlice), testsRan]).shows(counts("all", 5, 1, 0, 4));
+const counts = (on, all, refine, ready, built, totry) => [["all", "All", all], ["refine", "To refine", refine], ["ready", "Ready to build", ready], ["built", "Built", built], ["totry", "To try", totry]].map(([f, label, n]) => ({ f, label, n, on: f === on }));
+filters.scenario("Counts every slice as to refine at first").given([plan()]).shows(counts("all", 4, 4, 0, 0, 0));
+filters.scenario("Moves a ticked slice to ready to build", S({ filter: "ready" })).given([plan(), tick("add-todo")]).shows(counts("ready", 4, 3, 1, 0, 0));
+filters.scenario("Counts built slices once their scenarios pass").given([plan("built", newSlice), testsRan]).shows(counts("all", 5, 1, 0, 4, 4));
+filters.scenario("Leaves a built slice out of To try once every scenario is tried").given([plan("built"), testsRan, tried("add-todo", "add-todo-1"), tried("add-todo", "add-todo-2"), { type: "SliceWorks", data: { sliceId: "todo-list" } }])
+  .shows(counts("all", 4, 0, 0, 4, 2));
 
 const fold = of("FoldAllButton", foldAll);
 fold.scenario("Offers to fold two refined slices").given([plan(), tick("add-todo"), tick("todo-list")]).shows({ fold: true, text: "▾ Fold the 2 refined slices" });
@@ -113,6 +116,8 @@ chapters.scenario("Folds a chapter where everything is built").given([plan("buil
   .shows({ chapters: [{ name: "Todos", built: { count: 4, open: false }, slices: [] }, { name: "Later", built: null, slices: [card("rename-todo")] }], empty: "" });
 chapters.scenario("Shows only what matches the search", S({ q: "removed leaves" })).given([plan()])
   .shows({ chapters: [{ name: "Todos", built: null, slices: [card("todo-list")] }], empty: "" });
+chapters.scenario("Shows only built slices with something to try", S({ filter: "totry" })).given([plan("built"), testsRan, { type: "SliceWorks", data: { sliceId: "add-todo" } }])
+  .shows({ chapters: [{ name: "Todos", built: null, slices: ["complete-todo", "remove-todo", "todo-list"].map(card) }], empty: "" });
 chapters.scenario("Says when nothing matches", S({ q: "zebra" })).given([plan()]).shows({ chapters: [], empty: "Nothing matches “zebra”." });
 
 const slice = (name, id, openedBuilt) => of(name, (b, s) => sliceCard(b, s, id, openedBuilt));
@@ -140,6 +145,16 @@ scenarios.scenario("Adds the person's new scenario at the end").given([plan(), {
   .shows([{ key: "add-todo/add-todo-1", title: "Adds a todo", isNew: false, dot: "", folded: false, given: [], when: { command: "AddTodo" }, then: { events: ["TodoAdded"] } },
     { key: "add-todo/add-todo-2", title: "Refuses an empty title", isNew: false, dot: "", folded: false, given: [], when: { command: "AddTodo" }, then: { refused: "Title is required" } },
     { key: "add-todo/s-1", title: "Refuses a long title", isNew: true, dot: "", folded: false, given: [], when: { command: "AddTodo" }, then: { refused: "Too long" } }]);
+const triedStates = of("SliceCard", (b, s) => sliceCard(b, s, "add-todo").scenarios.map(x => x.tried && x.tried.state));
+triedStates.scenario("Asks to try each passing scenario of a built slice").given([plan("built"), testsRan]).shows(["todo", "todo"]);
+triedStates.scenario("Ticks a scenario the person tried this round").given([plan("built"), testsRan, tried("add-todo", "add-todo-2")]).shows(["todo", "now"]);
+triedStates.scenario("Remembers scenarios tried in earlier rounds").given([plan("built", m => { m.slices[0].scenarios[0].tried = true; }), testsRan]).shows(["done", "todo"]);
+triedStates.scenario("Offers no tick before the slice is built").given([plan()]).shows([null, null]);
+const sliceWorks = of("SliceCard", (b, s) => sliceCard(b, s, "add-todo").tried.works);
+sliceWorks.scenario("Says the slice works once every scenario is tried").given([plan("built", m => { for (const sc of m.slices[0].scenarios) sc.tried = true; }), testsRan]).shows("badge");
+const problemBox = of("SliceCard", (b, s) => sliceCard(b, s, "add-todo").scenarios[1].composer);
+problemBox.scenario("Asks what doesn't work in that one scenario", S({ compose: { kind: "problem", sliceId: "add-todo", scenarioId: "add-todo-2" } })).given([plan("built"), testsRan])
+  .shows({ part: false, title: "What doesn't work in “Refuses an empty title”?", placeholder: "What did you try, and what happened?", button: "Report problem" });
 const listCard = of("SliceCard", (b, s) => pick(sliceCard(b, s, "todo-list"), ["kind", "flow", "fields"]));
 listCard.scenario("Shows a view, what it shows and the events it reads").given([plan()])
   .shows({ kind: "view", flow: { from: ["TodoAdded", "TodoCompleted", "TodoRemoved"] }, fields: { label: "Shows", list: ["todoId", "title", "done"] } });
@@ -152,6 +167,7 @@ folded.scenario("Counts feedback on it not sent yet").given([plan(), tick("add-t
 
 const builtRow = of("BuiltSliceRow", b => builtSlice(b, "add-todo"));
 builtRow.scenario("Shows a built slice in one line").given([plan("built"), testsRan]).shows({ id: "add-todo", kind: "command", label: "Command", name: "AddTodo", works: false });
+builtRow.scenario("Says it works once every scenario is tried").given([plan("built", m => { for (const sc of m.slices[0].scenarios) sc.tried = true; }), testsRan]).shows({ id: "add-todo", kind: "command", label: "Command", name: "AddTodo", works: true });
 builtRow.scenario("Says it works once the person said so").given([plan("built", m => { m.slices[0].works = true; }), testsRan]).shows({ id: "add-todo", kind: "command", label: "Command", name: "AddTodo", works: true });
 
 const board = of("EventModelBoard", b => eventModelBoard(b));
@@ -180,6 +196,8 @@ const bar = of("FeedbackBar", feedbackBar);
 bar.scenario("Says there's no feedback yet").given([plan()]).shows({ locked: false, parts: [], saving: false, canSend: false });
 bar.scenario("Counts each kind of feedback").given([plan("built"), testsRan, tick("add-todo"), comment({ sliceId: "add-todo" }), comment({ sliceId: "remove-todo", problem: true }), { type: "SliceWorks", data: { sliceId: "todo-list" } }])
   .shows({ locked: false, parts: ["1 comment", "1 Refined change", "1 tried and working", "1 problem"], saving: false, canSend: true });
+bar.scenario("Counts the scenarios tried").given([plan("built"), testsRan, tried("add-todo", "add-todo-1"), tried("add-todo", "add-todo-2")])
+  .shows({ locked: false, parts: ["2 scenarios tried"], saving: false, canSend: true });
 bar.scenario("Says where the round was saved").given([plan(), tick("add-todo"), { type: "FeedbackSent", data: { saved: "plan/feedback/round-3.json" } }])
   .shows({ locked: true, saved: "plan/feedback/round-3.json" });
 

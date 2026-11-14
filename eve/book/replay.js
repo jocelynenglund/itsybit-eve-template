@@ -2,11 +2,11 @@
 //   PlanLoaded { model }      plan/model.json, as the AI last wrote it
 //   TestsRan { files, … }     plan/built.json, from `node eve/test.mjs` (absent until something is built)
 //   then this round's feedback, as the person gives it: CommentAdded, CommentResolved, ScenarioAdded,
-//   SliceMarkedRefined, SliceRefinedCleared, SliceWorks, LookAndFeelSet
+//   SliceMarkedRefined, SliceRefinedCleared, SliceWorks, ScenarioTried, LookAndFeelSet
 //   FeedbackSent { saved }    the round went to plan/feedback/ (the book is locked until the next round)
 // replay(history) folds them into "the book": one object every view reads. Pure: no DOM, no storage, no clock.
 
-const FEEDBACK = new Set(["CommentAdded", "CommentResolved", "ScenarioAdded", "SliceMarkedRefined", "SliceRefinedCleared", "SliceWorks", "LookAndFeelSet"]);
+const FEEDBACK = new Set(["CommentAdded", "CommentResolved", "ScenarioAdded", "SliceMarkedRefined", "SliceRefinedCleared", "SliceWorks", "ScenarioTried", "LookAndFeelSet"]);
 
 export function replay(history) {
   let model = null, built = null, sent = "";
@@ -27,8 +27,8 @@ export function replay(history) {
   for (const f of (built && built.files) || []) for (const s of f.scenarios || []) results.set(s.slice + "\u0000" + s.title, s);
 
   const comments = (model.comments || []).map(c => ({ ...c }));
-  const added = [], refined = {}, works = {};
-  for (const sl of slices) { refined[sl.id] = !!sl.refined; works[sl.id] = !!sl.works; }
+  const added = [], refined = {}, works = {}, tried = new Set();
+  for (const sl of slices) { refined[sl.id] = !!sl.refined; works[sl.id] = !!sl.works; for (const sc of sl.scenarios || []) if (sc.tried) tried.add(sl.id + "/" + sc.id); }
   let look = model.look || null, lookNew = false;
   for (const e of feedback) {
     const d = e.data;
@@ -39,12 +39,13 @@ export function replay(history) {
     if (e.type === "SliceMarkedRefined") refined[d.sliceId] = true;
     if (e.type === "SliceRefinedCleared") refined[d.sliceId] = false;
     if (e.type === "SliceWorks") works[d.sliceId] = true;
+    if (e.type === "ScenarioTried") tried.add(d.sliceId + "/" + d.scenarioId);
   }
   return {
     app: model.app || "", idea: model.idea || "", round: model.round || 1,
     events: (model.events || []).map(e => e.name), chapters, slices,
     tested: results.size > 0, results,
-    comments, added, refined, works, look, lookNew,
+    comments, added, refined, works, tried, look, lookNew,
     feedback, sent, locked: !!sent
   };
 }

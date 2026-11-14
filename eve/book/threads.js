@@ -19,9 +19,10 @@ export function composerOf(book, screen) {
   if (!c) return null;
   const problem = c.kind === "problem" && !c.threadId;
   const sl = problem && book.slices.find(s => s.id === c.sliceId);
+  const sc = sl && c.scenarioId && (sl.scenarios || []).find(x => x.id === c.scenarioId);
   return {
     part: c.kind === "scenario" && !c.threadId,
-    title: problem ? `What doesn't work in ${(sl && sl.name) || "this slice"}?` : "",
+    title: problem ? `What doesn't work in ${sc ? "“" + sc.title + "”" : (sl && sl.name) || "this slice"}?` : "",
     placeholder: c.threadId ? "Reply…" : problem ? "What did you try, and what happened?" : "What's wrong, missing or unclear?",
     button: c.threadId ? "Reply" : problem ? "Report problem" : "Add comment"
   };
