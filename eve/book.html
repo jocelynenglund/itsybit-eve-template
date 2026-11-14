@@ -127,6 +127,10 @@ main{padding:18px 0 120px}
 .slice.done{padding:8px 14px 8px 24px;box-shadow:none}
 .slice.done::before{top:8px;bottom:8px}
 .done-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.filters{gap:8px 12px}
+.seg.filter{flex-wrap:wrap}
+.seg button .n{font:500 11px var(--mono);opacity:.75;margin-left:2px}
+.fold-row{width:auto;flex:1;min-width:0}
 .done-row .name{color:var(--muted);font:700 16px var(--display)} .done-row .chev{margin-left:auto;color:var(--muted);font:700 11px var(--mono);text-transform:uppercase;letter-spacing:.06em}
 .chapter.done-ch>h2 .muted{font:400 14px var(--body)}
 .sc{border-top:1px dashed var(--line2);padding-top:10px;display:grid;gap:6px}
@@ -188,7 +192,7 @@ const POLL_MS = 4000;
 
 let model = null, modelText = "", built = null, builtText = "", loadError = "";
 let draft = { events: [], sent: "" };
-const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false, openDone: new Set(), lookForm: null, appWidth: "phone", appExists: null, mode: (() => { try { return localStorage.getItem("eve-mode") === "board" ? "board" : "book"; } catch (e) { return "book"; } })() };
+const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false, openDone: new Set(), filter: "all", lookForm: null, appWidth: "phone", appExists: null, mode: (() => { try { return localStorage.getItem("eve-mode") === "board" ? "board" : "book"; } catch (e) { return "book"; } })() };
 
 /* ---------- loading ---------- */
 async function fetchText(path) {
@@ -226,6 +230,10 @@ function loadDraft() {
   try { draft = JSON.parse(localStorage.getItem(draftKey())) || { events: [], sent: "" }; } catch (e) { draft = { events: [], sent: "" }; }
 }
 function saveDraft() { try { localStorage.setItem(draftKey(), JSON.stringify(draft)); } catch (e) { /* in memory only */ } }
+// Refined slices the person folded away, remembered per app in this browser.
+function foldKey() { return "eve-folded:" + (model.app || "app"); }
+function folded() { if (!ui.folded) { try { ui.folded = new Set(JSON.parse(localStorage.getItem(foldKey())) || []); } catch (e) { ui.folded = new Set(); } } return ui.folded; }
+function setFolded(id, on) { const f = folded(); on ? f.add(id) : f.delete(id); try { localStorage.setItem(foldKey(), JSON.stringify([...f])); } catch (e) { /* in memory only */ } }
 function add(type, data) { draft.events.push({ type, data, at: stamp() }); saveDraft(); render(); }
 function stamp() { const d = new Date(), p = n => String(n).padStart(2, "0"); return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()); }
 function uid(prefix) { return prefix + "-" + Math.random().toString(36).slice(2, 8); }
@@ -309,8 +317,10 @@ function render() {
       ${intro(allRefined, b, done.size && open.length)}
       ${renderThreads(V, t => !t.sliceId, "General comments")}
       ${!locked() ? composerOrButton({ kind: "board" }, "Add a general comment") : ""}
-      ${chapters.map(ch => renderChapter(ch, slices.filter(s => s.chapter === ch), V, done)).join("")}
-      ${orphans.length ? `<section class="chapter"><h2>Other</h2>${orphans.map(s => done.has(s.id) ? renderDone(s, V) : renderSlice(s, V)).join("")}</section>` : ""}
+      <div class="row spread filters">${filterSwitch(V, slices)}${foldAllButton(V, done)}</div>
+      ${chapters.map(ch => [ch, slices.filter(s => s.chapter === ch && shown(s, V))]).filter(([, l]) => l.length).map(([ch, l]) => renderChapter(ch, l, V, done)).join("")}
+      ${orphans.some(s => shown(s, V)) ? `<section class="chapter"><h2>Other</h2>${orphans.filter(s => shown(s, V)).map(s => done.has(s.id) ? renderDone(s, V) : renderOpen(s, V)).join("")}</section>` : ""}
+      ${slices.some(s => shown(s, V)) ? "" : `<p class="muted">No slices here right now.</p>`}
     </div></main>`}
     ${renderBar()}`;
   if (ui.mode === "board") requestAnimationFrame(drawArrows);
@@ -451,12 +461,28 @@ function isDone(sl, V) {
   if (V.added.some(a => a.sliceId === sl.id)) return false;
   return !V.comments.some(c => c.sliceId === sl.id && c.draft);
 }
+// Filters: every slice is in one state. To refine (not ticked yet), Ready to build (ticked, not built), Built (every scenario passes).
+const FILTERS = [["all", "All"], ["refine", "To refine"], ["ready", "Ready to build"], ["built", "Built"]];
+function stateOf(sl, V) { return isDone(sl, V) ? "built" : V.refined[sl.id] ? "ready" : "refine"; }
+function shown(sl, V) { return ui.filter === "all" || stateOf(sl, V) === ui.filter; }
+function filterSwitch(V, slices) {
+  const n = { all: slices.length, refine: 0, ready: 0, built: 0 };
+  for (const s of slices) n[stateOf(s, V)]++;
+  return `<span class="seg filter" role="group" aria-label="Show">${FILTERS.map(([f, l]) => `<button data-act="filter" data-f="${f}" aria-pressed="${ui.filter === f}">${l} <span class="n">${n[f]}</span></button>`).join("")}</span>`;
+}
+// Fold or show every refined slice at once (built ones fold by themselves).
+function foldAllButton(V, done) {
+  const ref = (model.slices || []).filter(s => V.refined[s.id] && !done.has(s.id));
+  if (ref.length < 2) return "";
+  const open = ref.filter(s => !folded().has(s.id)).length;
+  return `<div><button class="btn quiet" data-act="fold-all" data-on="${open ? 1 : 0}">${open ? `▾ Fold the ${ref.length} refined slices` : `▸ Show the ${ref.length} refined slices`}</button></div>`;
+}
 function renderChapter(ch, list, V, done) {
-  const allDone = list.length && list.every(s => done.has(s.id));
+  const allDone = ui.filter === "all" && list.length && list.every(s => done.has(s.id));
   const isOpen = ui.openDone.has("ch:" + ch);
   if (allDone && !isOpen) return `<section class="chapter done-ch"><h2><button class="done-row" data-act="toggle-done" data-key="${esc("ch:" + ch)}" aria-expanded="false">${esc(ch)} <span class="muted">· ${list.length} built</span><span class="chev">▸ show</span></button></h2></section>`;
   const head = allDone ? `<h2><button class="done-row" data-act="toggle-done" data-key="${esc("ch:" + ch)}" aria-expanded="true">${esc(ch)} <span class="muted">· ${list.length} built</span><span class="chev">▾ hide</span></button></h2>` : `<h2>${esc(ch)}</h2>`;
-  return `<section class="chapter ${allDone ? "done-ch" : ""}">${head}${list.map(s => done.has(s.id) && !allDone ? renderDone(s, V) : renderSlice(s, V)).join("")}</section>`;
+  return `<section class="chapter ${allDone ? "done-ch" : ""}">${head}${list.map(s => done.has(s.id) && !allDone ? renderDone(s, V) : renderOpen(s, V)).join("")}</section>`;
 }
 function renderDone(sl, V) {
   if (ui.openDone.has(sl.id)) return renderSlice(sl, V, true);
@@ -465,6 +491,14 @@ function renderDone(sl, V) {
     <span class="tag ${k}">${kindLabel[k]}</span><span class="mono name">${esc(sl.name)}</span><span class="badge pass">Built</span><span class="chev">▸ show</span></button></article>`;
 }
 
+function renderOpen(sl, V) {
+  if (!V.refined[sl.id] || !folded().has(sl.id)) return renderSlice(sl, V);
+  const k = kindOf(sl);
+  const drafts = V.comments.filter(c => c.sliceId === sl.id && c.draft).length + V.added.filter(a => a.sliceId === sl.id).length;
+  return `<article class="slice ${k} done is-refined" id="slice-${esc(sl.id)}"><div class="row">
+    <button class="done-row fold-row" data-act="fold" data-slice="${esc(sl.id)}" aria-expanded="false"><span class="tag ${k}">${kindLabel[k]}</span><span class="name">${esc(sl.name)}</span><span class="muted">${(sl.scenarios || []).length} scenarios${drafts ? ` · ${drafts} not sent yet` : ""}</span><span class="chev">▸ show</span></button>
+    <label class="refined on"><input type="checkbox" data-act="refine" data-slice="${esc(sl.id)}" checked ${locked() ? "disabled" : ""}>Refined</label></div></article>`;
+}
 function renderSlice(sl, V, folded) {
   const k = kindOf(sl), on = V.refined[sl.id];
   const scen = sl.scenarios || [];
@@ -480,7 +514,7 @@ function renderSlice(sl, V, folded) {
   return `<article class="slice ${k} ${on ? "is-refined" : ""}" id="slice-${esc(sl.id)}">
     <div class="row spread">
       <div class="row"><span class="tag ${k}">${kindLabel[k]}</span><h3 class="mono">${esc(sl.name)}</h3>${flow}</div>
-      <div class="row">${badge}${folded ? `<button class="btn quiet" data-act="toggle-done" data-key="${esc(sl.id)}" aria-expanded="true">▾ hide</button>` : ""}
+      <div class="row">${badge}${folded ? `<button class="btn quiet" data-act="toggle-done" data-key="${esc(sl.id)}" aria-expanded="true">▾ hide</button>` : on ? `<button class="btn quiet" data-act="fold" data-slice="${esc(sl.id)}" aria-expanded="true">▾ fold</button>` : ""}
         <label class="refined ${on ? "on" : ""}"><input type="checkbox" data-act="refine" data-slice="${esc(sl.id)}" ${on ? "checked" : ""} ${locked() ? "disabled" : ""}>Refined</label></div>
     </div>
     ${sl.fields && sl.fields.length ? `<p class="muted">${k === "view" ? "Shows" : "Needs"}: ${sl.fields.map(esc).join(", ")}</p>` : ""}
@@ -651,13 +685,16 @@ document.addEventListener("click", ev => {
       if (ui.mode === "look" && !ui.lookForm && !locked() && !view().look) ui.lookForm = blankLook(); if (ui.mode === "book" || ui.mode === "board") try { localStorage.setItem("eve-mode", ui.mode); } catch (e) {} render(); scrollTo(0, 0); break;
     case "goto": {
       const sl = (model.slices || []).find(s => s.id === el.dataset.slice); if (!sl) break;
-      ui.mode = "book"; try { localStorage.setItem("eve-mode", "book"); } catch (e) {}
-      ui.openDone.add(sl.id); if (sl.chapter) ui.openDone.add("ch:" + sl.chapter);
+      ui.mode = "book"; ui.filter = "all"; try { localStorage.setItem("eve-mode", "book"); } catch (e) {}
+      ui.openDone.add(sl.id); if (sl.chapter) ui.openDone.add("ch:" + sl.chapter); setFolded(sl.id, false);
       render();
       const t = document.getElementById("slice-" + sl.id);
       if (t) scrollTo({ top: t.getBoundingClientRect().top + scrollY - 110 });
       break;
     }
+    case "fold": { const id = el.dataset.slice; setFolded(id, !folded().has(id)); render(); const t = document.getElementById("slice-" + id); if (t && t.getBoundingClientRect().top < 90) scrollTo({ top: t.getBoundingClientRect().top + scrollY - 110 }); break; }
+    case "filter": ui.filter = el.dataset.f; render(); break;
+    case "fold-all": { const V = view(); for (const s of model.slices || []) if (V.refined[s.id]) setFolded(s.id, el.dataset.on === "1"); render(); break; }
     case "toggle-done": { const k = el.dataset.key; ui.openDone.has(k) ? ui.openDone.delete(k) : ui.openDone.add(k); render(); break; }
     case "reload": ui.newRound = false; ui.compose = null; ui.addFor = null; modelText = ""; loadAll(true); break;
   }
@@ -667,6 +704,7 @@ document.addEventListener("change", ev => {
   const el = ev.target;
   if (el.dataset.act !== "refine") return;
   const id = el.dataset.slice;
+  if (!el.checked) setFolded(id, false);
   const mine = draft.events.findIndex(e => (e.type === "SliceMarkedRefined" || e.type === "SliceRefinedCleared") && e.data.sliceId === id);
   if (mine >= 0) { draft.events.splice(mine, 1); saveDraft(); render(); }
   else add(el.checked ? "SliceMarkedRefined" : "SliceRefinedCleared", { sliceId: id });
