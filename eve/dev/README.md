@@ -12,4 +12,4 @@ npm test         # the Event Book, end to end
 
 `book.test.mjs` opens the Event Book on scratch copies of the sample (built, or still being planned) through
 `eve/serve.mjs`, and checks what a person sees and does on each tab. The Event Book's views and components have
-their own fast tests next to them in `eve/book/` (`node --test eve/book`), with nothing to install.
+their own fast tests in `eve/book/tests/` (`node --test "eve/book/tests/*.test.mjs"`), with nothing to install.
