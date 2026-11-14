@@ -6,7 +6,8 @@
       "version": "2026-11-14.2",
       "notes": [
         "Filters in the Event Book: show All, To refine, Ready to build or Built slices, with a count on each.",
-        "Fold a refined slice to one line (▾ fold), or fold them all at once. The book remembers which ones you folded."
+        "Fold a refined slice to one line (▾ fold), or fold them all at once. The book remembers which ones you folded.",
+        "Scenarios whose test passes shrink to one line (tap to open), so new and failing ones stand out."
       ]
     },
     {
