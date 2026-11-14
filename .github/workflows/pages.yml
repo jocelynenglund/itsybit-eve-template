@@ -25,6 +25,7 @@ jobs:
         with:
           fetch-depth: 0
       - run: node eve/test.mjs eve/sample/todo
+      - run: node --test "eve/book/tests/*.test.mjs"
       # The site's files live in eve/site/. Put the published site together so every old link still works:
       # / (eve/site/index.html), /site/ (its images and the What's-new pill), /eve/ (the Event Book, the
       # sample at /eve/sample/), and /sample/ (where the sample used to be).
