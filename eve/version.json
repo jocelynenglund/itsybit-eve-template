@@ -7,7 +7,8 @@
       "notes": [
         "Filters in the Event Book: show All, To refine, Ready to build or Built slices, with a count on each.",
         "Fold a refined slice to one line (▾ fold), or fold them all at once. The book remembers which ones you folded.",
-        "Scenarios whose test passes shrink to one line (tap to open), so new and failing ones stand out."
+        "Scenarios whose test passes shrink to one line (tap to open), so new and failing ones stand out.",
+        "Tried a built slice in your app? Press Works, or Doesn't work and say what happened. Your AI turns a problem into a failing scenario first, then fixes it."
       ]
     },
     {

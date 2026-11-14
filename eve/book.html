@@ -135,6 +135,8 @@ main{padding:18px 0 120px}
 .sc-row .name{flex:1;min-width:0;font:700 15px/1.3 var(--display);color:var(--ink)}
 .sc-row .chev{margin-top:3px;white-space:nowrap}
 .sc:has(.sc-row){padding-top:8px}
+.tried{gap:6px 8px}
+.btn.on{border-color:var(--pass);color:var(--pass)}
 .fold-row{width:auto;flex:1;min-width:0}
 .done-row .name{color:var(--muted);font:700 16px var(--display)} .done-row .chev{margin-left:auto;color:var(--muted);font:700 11px var(--mono);text-transform:uppercase;letter-spacing:.06em}
 .chapter.done-ch>h2 .muted{font:400 14px var(--body)}
@@ -249,23 +251,27 @@ function view() {
   const comments = (model.comments || []).map(c => ({ ...c }));
   const added = [];
   const refined = {};
-  for (const sl of model.slices || []) refined[sl.id] = !!sl.refined;
+  const works = {};
+  for (const sl of model.slices || []) { refined[sl.id] = !!sl.refined; works[sl.id] = !!sl.works; }
   let look = model.look || null, lookNew = false;
   for (const e of draft.events) {
     if (e.type === "LookAndFeelSet") { look = e.data; lookNew = true; }
     const d = e.data;
-    if (e.type === "CommentAdded") comments.push({ id: d.commentId, sliceId: d.sliceId, scenarioId: d.scenarioId, part: d.part, threadId: d.threadId, author: "you", text: d.text, at: d.at, draft: true });
+    if (e.type === "CommentAdded") comments.push({ id: d.commentId, sliceId: d.sliceId, scenarioId: d.scenarioId, part: d.part, threadId: d.threadId, author: "you", text: d.text, at: d.at, problem: !!d.problem, draft: true });
     if (e.type === "CommentResolved") { const c = comments.find(x => x.id === d.commentId); if (c) { c.resolved = true; c.resolvedNow = true; } }
     if (e.type === "ScenarioAdded") added.push(d);
     if (e.type === "SliceMarkedRefined") refined[d.sliceId] = true;
     if (e.type === "SliceRefinedCleared") refined[d.sliceId] = false;
+    if (e.type === "SliceWorks") works[d.sliceId] = true;
   }
-  return { comments, added, refined, look, lookNew };
+  return { comments, added, refined, works, look, lookNew };
 }
 function counts() {
-  const c = { comments: 0, scenarios: 0, ticks: 0, resolved: 0, look: 0 };
+  const c = { comments: 0, scenarios: 0, ticks: 0, resolved: 0, look: 0, works: 0, problems: 0 };
   for (const e of draft.events) {
-    if (e.type === "CommentAdded") c.comments++;
+    if (e.type === "CommentAdded" && e.data.problem) c.problems++;
+    else if (e.type === "CommentAdded") c.comments++;
+    else if (e.type === "SliceWorks") c.works++;
     else if (e.type === "ScenarioAdded") c.scenarios++;
     else if (e.type === "CommentResolved") c.resolved++;
     else if (e.type === "LookAndFeelSet") c.look = 1;
@@ -464,7 +470,7 @@ function isDone(sl, V) {
   if (!V.refined[sl.id] || !scen.length || !built || !built.map.size) return false;
   if (!scen.every(sc => { const r = built.map.get(sl.name + "\u0000" + sc.title); return r && r.passing; })) return false;
   if (V.added.some(a => a.sliceId === sl.id)) return false;
-  return !V.comments.some(c => c.sliceId === sl.id && c.draft);
+  return !V.comments.some(c => c.sliceId === sl.id && (c.draft || (c.problem && !c.resolved)));
 }
 // Filters: every slice is in one state. To refine (not ticked yet), Ready to build (ticked, not built), Built (every scenario passes).
 const FILTERS = [["all", "All"], ["refine", "To refine"], ["ready", "Ready to build"], ["built", "Built"]];
@@ -493,7 +499,7 @@ function renderDone(sl, V) {
   if (ui.openDone.has(sl.id)) return renderSlice(sl, V, true);
   const k = kindOf(sl);
   return `<article class="slice ${k} done" id="slice-${esc(sl.id)}"><button class="done-row" data-act="toggle-done" data-key="${esc(sl.id)}" aria-expanded="false">
-    <span class="tag ${k}">${kindLabel[k]}</span><span class="mono name">${esc(sl.name)}</span><span class="badge pass">Built</span><span class="chev">▸ show</span></button></article>`;
+    <span class="tag ${k}">${kindLabel[k]}</span><span class="mono name">${esc(sl.name)}</span><span class="badge pass">Built</span>${V.works[sl.id] ? `<span class="badge pass">✓ Works</span>` : ""}<span class="chev">▸ show</span></button></article>`;
 }
 
 function renderOpen(sl, V) {
@@ -513,6 +519,14 @@ function renderSlice(sl, V, folded) {
     const pass = res.filter(r => r && r.passing).length, fail = res.filter(r => r && !r.passing).length;
     badge = pass === scen.length && scen.length ? `<span class="badge pass">Built</span>` : fail ? `<span class="badge fail">${pass}/${scen.length} pass</span>` : pass ? `<span class="badge">${pass}/${scen.length} pass</span>` : `<span class="badge">Not built</span>`;
   }
+  const allPass = !!(built && built.map.size && scen.length && scen.every(sc => { const x = built.map.get(sl.name + "\u0000" + sc.title); return x && x.passing; }));
+  const worksNow = draft.events.some(e => e.type === "SliceWorks" && e.data.sliceId === sl.id);
+  const problem = V.comments.some(c => c.sliceId === sl.id && c.problem && !c.resolved);
+  const tried = !allPass ? "" : problem ? `<div class="row tried"><span class="refuse">problem reported</span><span class="muted">Your AI fixes it after you send this round.</span></div>` : `<div class="row tried"><span class="muted">Tried it in the app?</span>${
+    V.works[sl.id] && !worksNow ? `<span class="badge pass">✓ Works</span>`
+    : locked() ? "" : `<button class="btn ${worksNow ? "on" : ""}" data-act="works" data-slice="${esc(sl.id)}" aria-pressed="${worksNow}">✓ Works${worksNow ? " (not sent yet)" : ""}</button>`}${
+    !locked() ? `<button class="btn" data-act="compose" data-kind="problem" data-slice="${esc(sl.id)}">Doesn't work</button>` : ""}</div>
+    ${ui.compose && ui.compose.kind === "problem" && ui.compose.sliceId === sl.id ? renderComposer() : ""}`;
   const flow = k === "view"
     ? `<span class="muted">from</span> ${(sl.reads || []).map(e => `<span class="ev">${esc(e)}</span>`).join(" ")}`
     : `<span class="muted">→</span> ${(sl.produces || []).map(e => `<span class="ev">${esc(e)}</span>`).join(" ")}`;
@@ -522,6 +536,7 @@ function renderSlice(sl, V, folded) {
       <div class="row">${badge}${folded ? `<button class="btn quiet" data-act="toggle-done" data-key="${esc(sl.id)}" aria-expanded="true">▾ hide</button>` : on ? `<button class="btn quiet" data-act="fold" data-slice="${esc(sl.id)}" aria-expanded="true">▾ fold</button>` : ""}
         <label class="refined ${on ? "on" : ""}"><input type="checkbox" data-act="refine" data-slice="${esc(sl.id)}" ${on ? "checked" : ""} ${locked() ? "disabled" : ""}>Refined</label></div>
     </div>
+    ${tried}
     ${sl.fields && sl.fields.length ? `<p class="muted">${k === "view" ? "Shows" : "Needs"}: ${sl.fields.map(esc).join(", ")}</p>` : ""}
     ${sl.description ? `<p>${esc(sl.description)}</p>` : ""}
     ${renderThreads(V, t => t.sliceId === sl.id && !t.scenarioId)}
@@ -580,7 +595,7 @@ function renderComment(c) {
   const part = c.part ? ` · on ${esc(c.part[0].toUpperCase() + c.part.slice(1))}` : "";
   return `<div class="cm ${c.author === "ai" ? "ai" : ""} ${c.draft ? "draft" : ""}">
     <span class="who"><b>${c.author === "ai" ? "AI" : "You"}</b>${c.at ? " · " + esc(c.at) : ""}${part}</span>
-    <span>${esc(c.text)} ${c.draft && !locked() ? `<button class="btn quiet" data-act="drop-comment" data-id="${esc(c.id)}">Remove</button>` : ""}</span></div>`;
+    <span>${c.problem ? `<span class="refuse">problem</span> ` : ""}${esc(c.text)} ${c.draft && !locked() ? `<button class="btn quiet" data-act="drop-comment" data-id="${esc(c.id)}">Remove</button>` : ""}</span></div>`;
 }
 
 function composerOrButton(target, label) {
@@ -597,8 +612,9 @@ function renderComposer() {
   return `<form class="composer" data-form="comment">
     ${partSelect}
     <label class="sr" for="cm-text">Comment</label>
-    <textarea id="cm-text" placeholder="${c.threadId ? "Reply…" : "What's wrong, missing or unclear?"}" required></textarea>
-    <div class="row"><button class="btn primary" type="submit">${c.threadId ? "Reply" : "Add comment"}</button><button class="btn quiet" type="button" data-act="cancel">Cancel</button></div>
+    ${c.kind === "problem" ? `<strong>What doesn't work in ${esc(((model.slices || []).find(s => s.id === c.sliceId) || {}).name || "this slice")}?</strong>` : ""}
+    <textarea id="cm-text" placeholder="${c.threadId ? "Reply…" : c.kind === "problem" ? "What did you try, and what happened?" : "What's wrong, missing or unclear?"}" required></textarea>
+    <div class="row"><button class="btn primary" type="submit">${c.threadId ? "Reply" : c.kind === "problem" ? "Report problem" : "Add comment"}</button><button class="btn quiet" type="button" data-act="cancel">Cancel</button></div>
   </form>`;
 }
 
@@ -631,6 +647,8 @@ function renderBar() {
   if (c.scenarios) parts.push(c.scenarios + " new scenario" + (c.scenarios > 1 ? "s" : ""));
   if (c.ticks) parts.push(c.ticks + " Refined change" + (c.ticks > 1 ? "s" : ""));
   if (c.resolved) parts.push(c.resolved + " resolved");
+  if (c.works) parts.push(c.works + " tried and working");
+  if (c.problems) parts.push(c.problems + " problem" + (c.problems > 1 ? "s" : ""));
   if (c.look) parts.push("look and feel");
   return `<div class="bar"><div class="wrap">
     <span class="muted">${parts.length ? "Your feedback this round: " + parts.join(" · ") : "No feedback yet this round."}</span>
@@ -704,6 +722,7 @@ document.addEventListener("click", ev => {
       break;
     }
     case "fold": { const id = el.dataset.slice; setFolded(id, !folded().has(id)); render(); const t = document.getElementById("slice-" + id); if (t && t.getBoundingClientRect().top < 90) scrollTo({ top: t.getBoundingClientRect().top + scrollY - 110 }); break; }
+    case "works": { const id = el.dataset.slice, i = draft.events.findIndex(e => e.type === "SliceWorks" && e.data.sliceId === id); i >= 0 ? draft.events.splice(i, 1) : draft.events.push({ type: "SliceWorks", data: { sliceId: id }, at: stamp() }); saveDraft(); render(); break; }
     case "sc-open": { const k = el.dataset.key; ui.openSc.has(k) ? ui.openSc.delete(k) : ui.openSc.add(k); render(); break; }
     case "filter": ui.filter = el.dataset.f; render(); break;
     case "fold-all": { const V = view(); for (const s of model.slices || []) if (V.refined[s.id]) setFolded(s.id, el.dataset.on === "1"); render(); break; }
@@ -735,6 +754,7 @@ document.addEventListener("submit", ev => {
     if (partEl && partEl.value) data.part = partEl.value;
     if (c.part) data.part = c.part;
     if (c.threadId) data.threadId = c.threadId;
+    if (c.kind === "problem") { data.problem = true; draft.events = draft.events.filter(e => !(e.type === "SliceWorks" && e.data.sliceId === c.sliceId)); }
     ui.compose = null;
     add("CommentAdded", data);
   } else if (form === "look") {
