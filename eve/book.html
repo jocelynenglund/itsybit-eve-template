@@ -128,6 +128,7 @@ main{padding:18px 0 120px}
 .slice.done::before{top:8px;bottom:8px}
 .done-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
 .filters{gap:8px 12px}
+.search input{padding:10px 14px;border-radius:999px}
 .seg.filter{flex-wrap:wrap}
 .seg button .n{font:500 11px var(--mono);opacity:.75;margin-left:2px}
 .sc-row{flex-wrap:nowrap;align-items:flex-start}
@@ -166,8 +167,8 @@ main{padding:18px 0 120px}
 .cm.ai .who b{color:var(--jam)}
 .cm.draft .who::after{content:" · not sent yet";color:var(--jam)}
 .composer{display:grid;gap:6px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px}
-textarea,input[type=text],select{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:8px 11px;width:100%}
-textarea:focus,input[type=text]:focus,select:focus{border-color:var(--ink);outline:none}
+textarea,input[type=text],input[type=search],select{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:8px 11px;width:100%}
+textarea:focus,input[type=text]:focus,input[type=search]:focus,select:focus{border-color:var(--ink);outline:none}
 textarea{min-height:64px;resize:vertical}
 .chip{font:700 13px/1.3 var(--display);border:1.5px dashed var(--line2);background:transparent;border-radius:3px;padding:3px 8px;cursor:pointer;color:var(--muted)}
 .chip[aria-pressed="true"]{border-style:solid;border-color:transparent;background:var(--n-event);color:var(--t-event);box-shadow:var(--note-shadow)}
@@ -199,7 +200,7 @@ const POLL_MS = 4000;
 
 let model = null, modelText = "", built = null, builtText = "", loadError = "";
 let draft = { events: [], sent: "" };
-const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false, openDone: new Set(), openSc: new Set(), filter: "all", lookForm: null, appWidth: "phone", appExists: null, mode: (() => { try { return localStorage.getItem("eve-mode") === "board" ? "board" : "book"; } catch (e) { return "book"; } })() };
+const ui = { compose: null, addFor: null, form: null, saving: false, message: "", newRound: false, openDone: new Set(), openSc: new Set(), filter: "all", q: "", lookForm: null, appWidth: "phone", appExists: null, mode: (() => { try { return localStorage.getItem("eve-mode") === "board" ? "board" : "book"; } catch (e) { return "book"; } })() };
 
 /* ---------- loading ---------- */
 async function fetchText(path) {
@@ -302,6 +303,8 @@ function render() {
   const chapters = (model.chapters || []).map(c => c.name);
   for (const s of slices) if (s.chapter && !chapters.includes(s.chapter)) chapters.push(s.chapter);
   const orphans = slices.filter(s => !s.chapter);
+  // Typing in the search box redraws the book: keep the cursor where it was.
+  const act = document.activeElement, keep = act && act.id === "q" ? [act.selectionStart, act.selectionEnd] : null;
   el.innerHTML =
     `<header class="top"><div class="wrap">
       <div class="brand"><div class="mark" aria-hidden="true" title="itsyBIT EVE"><svg viewBox="0 0 140 120"><rect x="5" y="5" width="90" height="110" rx="16" fill="#9B2335"/><circle cx="50" cy="42" r="22" fill="none" stroke="#fff" stroke-width="8"/><line x1="30" y1="92" x2="70" y2="92" stroke="#fff" stroke-width="8" stroke-linecap="round"/><circle cx="121" cy="27" r="11" style="fill:var(--command)"/><circle cx="121" cy="60" r="11" style="fill:var(--event)"/><circle cx="121" cy="93" r="11" style="fill:var(--view)"/></svg></div>
@@ -328,12 +331,14 @@ function render() {
       ${intro(allRefined, b, done.size && open.length)}
       ${renderThreads(V, t => !t.sliceId, "General comments")}
       ${!locked() ? composerOrButton({ kind: "board" }, "Add a general comment") : ""}
+      <div class="search"><label class="sr" for="q">Search</label><input type="search" id="q" placeholder="Search slices, events, scenarios…" value="${esc(ui.q)}" autocomplete="off"></div>
       <div class="row spread filters">${filterSwitch(V, slices)}${foldAllButton(V, done)}</div>
       ${chapters.map(ch => [ch, slices.filter(s => s.chapter === ch && shown(s, V))]).filter(([, l]) => l.length).map(([ch, l]) => renderChapter(ch, l, V, done)).join("")}
       ${orphans.some(s => shown(s, V)) ? `<section class="chapter"><h2>Other</h2>${orphans.filter(s => shown(s, V)).map(s => done.has(s.id) ? renderDone(s, V) : renderOpen(s, V)).join("")}</section>` : ""}
-      ${slices.some(s => shown(s, V)) ? "" : `<p class="muted">No slices here right now.</p>`}
+      ${slices.some(s => shown(s, V)) ? "" : `<p class="muted">${ui.q.trim() ? `Nothing matches “${esc(ui.q.trim())}”.` : "No slices here right now."}</p>`}
     </div></main>`}
     ${renderBar()}`;
+  if (keep) { const q = document.getElementById("q"); if (q) { q.focus(); q.setSelectionRange(keep[0], keep[1]); } }
   if (ui.mode === "board") requestAnimationFrame(drawArrows);
 }
 
@@ -475,7 +480,16 @@ function isDone(sl, V) {
 // Filters: every slice is in one state. To refine (not ticked yet), Ready to build (ticked, not built), Built (every scenario passes).
 const FILTERS = [["all", "All"], ["refine", "To refine"], ["ready", "Ready to build"], ["built", "Built"]];
 function stateOf(sl, V) { return isDone(sl, V) ? "built" : V.refined[sl.id] ? "ready" : "refine"; }
-function shown(sl, V) { return ui.filter === "all" || stateOf(sl, V) === ui.filter; }
+function shown(sl, V) { return (ui.filter === "all" || stateOf(sl, V) === ui.filter) && matches(sl); }
+// Search: every word typed must appear somewhere in the slice: its name, events, fields, scenarios or refusals.
+function matches(sl) {
+  const words_ = ui.q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words_.length) return true;
+  const hay = [sl.name, words(sl.name), sl.chapter, sl.description, ...(sl.produces || []), ...(sl.reads || []), ...(sl.fields || []),
+    ...(sl.scenarios || []).flatMap(sc => [sc.title, sc.when, ...(sc.given || []).map(g => g.type || g), ...((sc.then || {}).events || []).map(e => e.type || e), (sc.then || {}).rejected, (sc.then || {}).view, typeof (sc.then || {}).value === "string" ? sc.then.value : ""])]
+    .filter(Boolean).join(" ").toLowerCase();
+  return words_.every(w => hay.includes(w));
+}
 function filterSwitch(V, slices) {
   const n = { all: slices.length, refine: 0, ready: 0, built: 0 };
   for (const s of slices) n[stateOf(s, V)]++;
@@ -489,7 +503,7 @@ function foldAllButton(V, done) {
   return `<div><button class="btn quiet" data-act="fold-all" data-on="${open ? 1 : 0}">${open ? `▾ Fold the ${ref.length} refined slices` : `▸ Show the ${ref.length} refined slices`}</button></div>`;
 }
 function renderChapter(ch, list, V, done) {
-  const allDone = ui.filter === "all" && list.length && list.every(s => done.has(s.id));
+  const allDone = ui.filter === "all" && !ui.q.trim() && list.length && list.every(s => done.has(s.id));
   const isOpen = ui.openDone.has("ch:" + ch);
   if (allDone && !isOpen) return `<section class="chapter done-ch"><h2><button class="done-row" data-act="toggle-done" data-key="${esc("ch:" + ch)}" aria-expanded="false">${esc(ch)} <span class="muted">· ${list.length} built</span><span class="chev">▸ show</span></button></h2></section>`;
   const head = allDone ? `<h2><button class="done-row" data-act="toggle-done" data-key="${esc("ch:" + ch)}" aria-expanded="true">${esc(ch)} <span class="muted">· ${list.length} built</span><span class="chev">▾ hide</span></button></h2>` : `<h2>${esc(ch)}</h2>`;
@@ -714,7 +728,7 @@ document.addEventListener("click", ev => {
       if (ui.mode === "look" && !ui.lookForm && !locked() && !view().look) ui.lookForm = blankLook(); if (ui.mode === "book" || ui.mode === "board") try { localStorage.setItem("eve-mode", ui.mode); } catch (e) {} render(); scrollTo(0, 0); break;
     case "goto": {
       const sl = (model.slices || []).find(s => s.id === el.dataset.slice); if (!sl) break;
-      ui.mode = "book"; ui.filter = "all"; try { localStorage.setItem("eve-mode", "book"); } catch (e) {}
+      ui.mode = "book"; ui.filter = "all"; ui.q = ""; try { localStorage.setItem("eve-mode", "book"); } catch (e) {}
       ui.openDone.add(sl.id); if (sl.chapter) ui.openDone.add("ch:" + sl.chapter); setFolded(sl.id, false);
       render();
       const t = document.getElementById("slice-" + sl.id);
@@ -730,6 +744,9 @@ document.addEventListener("click", ev => {
     case "reload": ui.newRound = false; ui.compose = null; ui.addFor = null; modelText = ""; loadAll(true); break;
   }
 });
+
+document.addEventListener("input", ev => { if (ev.target.id === "q") { ui.q = ev.target.value; render(); } });
+document.addEventListener("keydown", ev => { if (ev.target.id === "q" && ev.key === "Escape" && ui.q) { ui.q = ""; render(); } });
 
 document.addEventListener("change", ev => {
   const el = ev.target;
